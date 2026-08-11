@@ -366,3 +366,26 @@ ul {
   text-align: center;
   min-width: 64px;
 }
+
+.scan-debug {
+  margin-top: 16px;
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  padding: 8px 12px;
+  background: var(--card-bg);
+}
+
+.scan-debug summary {
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.scan-debug pre {
+  margin: 8px 0 0;
+  max-height: 40vh;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
