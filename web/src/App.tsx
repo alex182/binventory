@@ -1,3 +1,4 @@
+import SearchBar from "./components/SearchBar";
 import BinDetail from "./pages/BinDetail";
 import Locations from "./pages/Locations";
 import PrintSheet from "./pages/PrintSheet";
@@ -27,6 +28,9 @@ export default function App() {
         <button onClick={() => navigate("/scan")}>Scan</button>
         <button onClick={() => navigate("/print")}>Print labels</button>
       </nav>
+      <div className="no-print">
+        <SearchBar />
+      </div>
       {content}
     </div>
   );

@@ -148,6 +148,18 @@ export function deleteItem(id: number): Promise<void> {
   return request<void>(`/items/${id}`, { method: "DELETE" });
 }
 
+export interface SearchResult {
+  bin_id: number;
+  label: string;
+  code: string;
+  location_path: string;
+  matched_field: string;
+}
+
+export function search(q: string): Promise<SearchResult[]> {
+  return request<SearchResult[]>(`/search?q=${encodeURIComponent(q)}`);
+}
+
 export interface GridCell {
   stack_id: number;
   grid_row: number;
