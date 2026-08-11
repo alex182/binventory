@@ -3,3 +3,5 @@ uvicorn[standard]
 sqlmodel
 httpx
 qrcode[pil]
+pillow
+python-multipart
