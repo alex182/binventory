@@ -148,6 +148,31 @@ export function deleteItem(id: number): Promise<void> {
   return request<void>(`/items/${id}`, { method: "DELETE" });
 }
 
+export function loanItem(id: number, loanedTo: string): Promise<Item> {
+  return request<Item>(`/items/${id}/loan`, {
+    method: "POST",
+    body: JSON.stringify({ loaned_to: loanedTo }),
+  });
+}
+
+export function returnItem(id: number): Promise<Item> {
+  return request<Item>(`/items/${id}/return`, { method: "POST" });
+}
+
+export interface LoanRecord {
+  item_id: number;
+  item_name: string;
+  bin_id: number;
+  bin_label: string | null;
+  bin_code: string | null;
+  loaned_to: string;
+  loaned_at: string;
+}
+
+export function listLoans(): Promise<LoanRecord[]> {
+  return request<LoanRecord[]>("/loans");
+}
+
 export interface SearchResult {
   bin_id: number;
   label: string;

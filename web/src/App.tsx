@@ -1,5 +1,6 @@
 import SearchBar from "./components/SearchBar";
 import BinDetail from "./pages/BinDetail";
+import Loans from "./pages/Loans";
 import Locations from "./pages/Locations";
 import PrintSheet from "./pages/PrintSheet";
 import Scan from "./pages/Scan";
@@ -16,6 +17,8 @@ export default function App() {
     content = <Scan />;
   } else if (path === "/print") {
     content = <PrintSheet />;
+  } else if (path === "/loans") {
+    content = <Loans />;
   } else {
     content = <Locations />;
   }
@@ -27,6 +30,7 @@ export default function App() {
         <button onClick={() => navigate("/")}>Locations</button>
         <button onClick={() => navigate("/scan")}>Scan</button>
         <button onClick={() => navigate("/print")}>Print labels</button>
+        <button onClick={() => navigate("/loans")}>Loans</button>
       </nav>
       <div className="no-print">
         <SearchBar />

@@ -6,7 +6,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
 from db import init_db
-from routers import bins, items, locations, search
+from routers import bins, items, loans, locations, search
 
 
 class SpacedJSONResponse(JSONResponse):
@@ -28,6 +28,7 @@ def health():
 app.include_router(locations.router)
 app.include_router(bins.router)
 app.include_router(items.router)
+app.include_router(loans.router)
 app.include_router(search.router)
 
 
