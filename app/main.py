@@ -43,7 +43,22 @@ if STATIC_DIR.is_dir():
     def spa(full_path: str):
         if full_path.startswith("api/") or full_path == "api":
             raise HTTPException(status_code=404)
+
         candidate = STATIC_DIR / full_path
         if full_path and candidate.is_file():
-            return FileResponse(candidate)
-        return FileResponse(STATIC_DIR / "index.html")
+            # Vite's build output under assets/ is content-hashed (a new
+            # build gets a new filename), so it's safe — and desirable — to
+            # cache forever. Everything else (index.html, manifest, icons,
+            # sw.js, and this same fallback for arbitrary SPA routes) must
+            # never be cached without revalidation: index.html references
+            # those hashed filenames by name, so a stale cached copy points
+            # at assets a new deploy has already removed, and the app fails
+            # to load at all. This is what broke scanning on a phone whose
+            # browser cache had latched onto an old index.html.
+            if full_path.startswith("assets/"):
+                headers = {"Cache-Control": "public, max-age=31536000, immutable"}
+            else:
+                headers = {"Cache-Control": "no-store"}
+            return FileResponse(candidate, headers=headers)
+
+        return FileResponse(STATIC_DIR / "index.html", headers={"Cache-Control": "no-store"})
