@@ -2,8 +2,10 @@ from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
+from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
 app = FastAPI()
+app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
 
 
 @app.get("/api/health")
