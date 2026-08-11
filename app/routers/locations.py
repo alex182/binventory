@@ -42,6 +42,10 @@ def validate_hierarchy(
     parent = session.get(Location, parent_id)
     if parent is None:
         raise HTTPException(status_code=404, detail="parent not found")
+    if kind == "stack" and parent.kind == "site":
+        # Grid layout: a site's grid stacks sit directly under it, skipping
+        # "zone" (CLAUDE.md: "Storage Unit · R1C1 · tote 1").
+        return parent
     parent_idx = LEVELS.index(parent.kind)
     if parent_idx + 1 >= len(LEVELS) or LEVELS[parent_idx + 1] != kind:
         raise HTTPException(

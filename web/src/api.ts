@@ -1,0 +1,112 @@
+export interface Location {
+  id: number;
+  name: string;
+  kind: "site" | "zone" | "stack" | "slot";
+  parent_id: number | null;
+  grid_row: number | null;
+  grid_col: number | null;
+}
+
+export interface LocationTreeNode extends Location {
+  children: LocationTreeNode[];
+}
+
+export type Fullness = "empty" | "room" | "full";
+
+export interface Bin {
+  id: number;
+  code: string;
+  label: string;
+  status: "blank" | "active";
+  location_id: number | null;
+  stack_position: number | null;
+  fullness: Fullness;
+  location_note: string;
+  notes: string;
+  created_at: string;
+}
+
+export interface BinInput {
+  label: string;
+  location_id: number | null;
+  stack_position: number | null;
+  fullness: Fullness;
+  location_note: string;
+  notes: string;
+}
+
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const resp = await fetch(`/api${path}`, {
+    headers: { "content-type": "application/json" },
+    ...init,
+  });
+  if (!resp.ok) {
+    const body = await resp.json().catch(() => ({}));
+    throw new Error(body.detail ?? `Request failed: ${resp.status}`);
+  }
+  if (resp.status === 204) return undefined as T;
+  return resp.json();
+}
+
+export function listLocations(): Promise<Location[]> {
+  return request<Location[]>("/locations");
+}
+
+export function getLocationTree(): Promise<LocationTreeNode[]> {
+  return request<LocationTreeNode[]>("/locations/tree");
+}
+
+export function listBins(params?: {
+  location_id?: number;
+  include_blank?: boolean;
+}): Promise<Bin[]> {
+  const qs = new URLSearchParams();
+  if (params?.location_id != null) qs.set("location_id", String(params.location_id));
+  if (params?.include_blank) qs.set("include_blank", "true");
+  const suffix = qs.toString() ? `?${qs.toString()}` : "";
+  return request<Bin[]>(`/bins${suffix}`);
+}
+
+export function getBin(id: number): Promise<Bin> {
+  return request<Bin>(`/bins/${id}`);
+}
+
+export function createBin(data: BinInput): Promise<Bin> {
+  return request<Bin>("/bins", { method: "POST", body: JSON.stringify(data) });
+}
+
+export function updateBin(id: number, data: BinInput): Promise<Bin> {
+  return request<Bin>(`/bins/${id}`, { method: "PATCH", body: JSON.stringify(data) });
+}
+
+export function deleteBin(id: number): Promise<void> {
+  return request<void>(`/bins/${id}`, { method: "DELETE" });
+}
+
+function locationLabel(loc: Location): string {
+  if (loc.kind === "stack" && loc.grid_row != null && loc.grid_col != null) {
+    return `R${loc.grid_row}C${loc.grid_col}`;
+  }
+  return loc.name;
+}
+
+export function locationPath(locations: Location[], locationId: number | null): string {
+  if (locationId == null) return "";
+  const byId = new Map(locations.map((l) => [l.id, l]));
+  const parts: string[] = [];
+  let current = byId.get(locationId);
+  while (current) {
+    parts.unshift(locationLabel(current));
+    current = current.parent_id != null ? byId.get(current.parent_id) : undefined;
+  }
+  return parts.join(" · ");
+}
+
+export function binAddress(locations: Location[], bin: Bin): string {
+  const path = locationPath(locations, bin.location_id);
+  const withPosition =
+    path && bin.stack_position != null ? `${path} · tote ${bin.stack_position}` : path;
+  if (withPosition && bin.location_note) return `${withPosition} · ${bin.location_note}`;
+  if (withPosition) return withPosition;
+  return bin.location_note || "—";
+}
