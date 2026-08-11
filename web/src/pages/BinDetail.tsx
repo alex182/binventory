@@ -14,6 +14,7 @@ import {
   returnItem,
 } from "../api";
 import MoveDialog from "../components/MoveDialog";
+import PhotoGrid from "../components/PhotoGrid";
 import { navigate } from "../router";
 import ClaimBin from "./ClaimBin";
 
@@ -161,6 +162,7 @@ export default function BinDetail({ code }: Props) {
         </p>
       )}
       {bin.notes && <p>Notes: {bin.notes}</p>}
+      <PhotoGrid binId={bin.id} />
       <ItemsSection binId={bin.id} />
       <button onClick={() => setShowMoveDialog(true)}>Move</button>
       {showMoveDialog && (

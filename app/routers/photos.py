@@ -5,7 +5,7 @@ from pathlib import Path
 from fastapi import APIRouter, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from PIL import Image
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 from config import DATA_DIR
 from db import engine
@@ -21,6 +21,14 @@ THUMB_SIZE = (256, 256)
 
 def thumb_filename(filename: str) -> str:
     return f"thumb_{filename}"
+
+
+@router.get("/api/bins/{bin_id}/photos", response_model=list[Photo])
+def list_bin_photos(bin_id: int):
+    with Session(engine) as session:
+        if session.get(Bin, bin_id) is None:
+            raise HTTPException(status_code=404, detail="bin not found")
+        return session.exec(select(Photo).where(Photo.bin_id == bin_id)).all()
 
 
 @router.post("/api/bins/{bin_id}/photos", response_model=Photo, status_code=201)

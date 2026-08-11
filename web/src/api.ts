@@ -191,6 +191,40 @@ export function listLoans(): Promise<LoanRecord[]> {
   return request<LoanRecord[]>("/loans");
 }
 
+export interface Photo {
+  id: number;
+  bin_id: number;
+  filename: string;
+  created_at: string;
+}
+
+export function listPhotos(binId: number): Promise<Photo[]> {
+  return request<Photo[]>(`/bins/${binId}/photos`);
+}
+
+export async function uploadPhoto(binId: number, file: File): Promise<Photo> {
+  const formData = new FormData();
+  formData.append("file", file);
+  const resp = await fetch(`/api/bins/${binId}/photos`, { method: "POST", body: formData });
+  if (!resp.ok) {
+    const body = await resp.json().catch(() => ({}));
+    throw new Error(body.detail ?? `Request failed: ${resp.status}`);
+  }
+  return resp.json();
+}
+
+export function deletePhoto(id: number): Promise<void> {
+  return request<void>(`/photos/${id}`, { method: "DELETE" });
+}
+
+export function photoUrl(id: number): string {
+  return `/api/photos/${id}`;
+}
+
+export function photoThumbUrl(id: number): string {
+  return `/api/photos/${id}/thumb`;
+}
+
 export interface SearchResult {
   bin_id: number;
   label: string;
