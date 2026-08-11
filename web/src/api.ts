@@ -191,6 +191,22 @@ export function listLoans(): Promise<LoanRecord[]> {
   return request<LoanRecord[]>("/loans");
 }
 
+export interface MoveLogEntry {
+  id: number;
+  bin_id: number;
+  from_location_id: number | null;
+  from_location_name: string | null;
+  to_location_id: number | null;
+  to_location_name: string | null;
+  from_position: number | null;
+  to_position: number | null;
+  moved_at: string;
+}
+
+export function getBinHistory(binId: number): Promise<MoveLogEntry[]> {
+  return request<MoveLogEntry[]>(`/bins/${binId}/history`);
+}
+
 export interface Photo {
   id: number;
   bin_id: number;

@@ -3,10 +3,12 @@ import {
   Bin,
   Item,
   Location,
+  MoveLogEntry,
   binAddress,
   createItem,
   deleteItem,
   getBinByCode,
+  getBinHistory,
   listItems,
   listLocations,
   loanItem,
@@ -120,10 +122,37 @@ function ItemsSection({ binId }: { binId: number }) {
   );
 }
 
+function HistorySection({ binId, refreshToken }: { binId: number; refreshToken: number }) {
+  const [history, setHistory] = useState<MoveLogEntry[]>([]);
+
+  useEffect(() => {
+    getBinHistory(binId).then(setHistory);
+  }, [binId, refreshToken]);
+
+  if (history.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="history-section">
+      <h3>History</h3>
+      <ul className="history-list">
+        {history.map((entry) => (
+          <li key={entry.id}>
+            {entry.from_location_name ?? "—"} → {entry.to_location_name ?? "—"}
+            <span className="history-date">{new Date(entry.moved_at).toLocaleString()}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 export default function BinDetail({ code }: Props) {
   const [bin, setBin] = useState<Bin | null | undefined>(undefined);
   const [locations, setLocations] = useState<Location[]>([]);
   const [showMoveDialog, setShowMoveDialog] = useState(false);
+  const [historyRefreshToken, setHistoryRefreshToken] = useState(0);
 
   useEffect(() => {
     setBin(undefined);
@@ -172,10 +201,12 @@ export default function BinDetail({ code }: Props) {
           onMove={async (toLocationId) => {
             const moved = await moveBin(bin.id, toLocationId);
             setBin(moved);
+            setHistoryRefreshToken((t) => t + 1);
           }}
           onClose={() => setShowMoveDialog(false)}
         />
       )}
+      <HistorySection binId={bin.id} refreshToken={historyRefreshToken} />
       <button onClick={() => navigate("/")}>Back to locations</button>
     </div>
   );

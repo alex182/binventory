@@ -11,7 +11,7 @@ from sqlmodel import Session, select
 
 from config import BASE_URL
 from db import engine
-from models import Bin, MoveLog
+from models import Bin, Location, MoveLog
 
 router = APIRouter(prefix="/api/bins", tags=["bins"])
 
@@ -152,6 +152,38 @@ def get_bin(bin_id: int):
         if bin_ is None:
             raise HTTPException(status_code=404, detail="not found")
         return serialize_bin(bin_, siblings_of(session, bin_))
+
+
+@router.get("/{bin_id}/history")
+def bin_history(bin_id: int):
+    with Session(engine) as session:
+        if session.get(Bin, bin_id) is None:
+            raise HTTPException(status_code=404, detail="not found")
+        logs = session.exec(
+            select(MoveLog).where(MoveLog.bin_id == bin_id).order_by(MoveLog.moved_at.desc())
+        ).all()
+        locations_by_id = {loc.id: loc for loc in session.exec(select(Location)).all()}
+
+    def loc_name(loc_id: Optional[int]) -> Optional[str]:
+        if loc_id is None:
+            return None
+        loc = locations_by_id.get(loc_id)
+        return loc.name if loc else None
+
+    return [
+        {
+            "id": log.id,
+            "bin_id": log.bin_id,
+            "from_location_id": log.from_location_id,
+            "from_location_name": loc_name(log.from_location_id),
+            "to_location_id": log.to_location_id,
+            "to_location_name": loc_name(log.to_location_id),
+            "from_position": log.from_position,
+            "to_position": log.to_position,
+            "moved_at": log.moved_at,
+        }
+        for log in logs
+    ]
 
 
 @router.get("/by-code/{code}")
