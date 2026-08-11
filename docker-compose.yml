@@ -8,5 +8,22 @@ services:
     volumes:
       - data:/data
 
+  # Opt-in local HTTPS for LAN testing (e.g. camera/QR scan from a phone,
+  # which requires a secure context). Not part of the default `docker
+  # compose up` — production TLS is handled by an external nginx per
+  # CLAUDE.md. Generate a cert first with scripts/gen-dev-cert.sh, then:
+  #   docker compose --profile tls up -d --build
+  tls-proxy:
+    image: nginx:alpine
+    profiles: ["tls"]
+    depends_on:
+      - app
+    ports:
+      - "443:443"
+    volumes:
+      - ./tls/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./tls/cert.pem:/etc/nginx/tls/cert.pem:ro
+      - ./tls/key.pem:/etc/nginx/tls/key.pem:ro
+
 volumes:
   data:

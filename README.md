@@ -45,3 +45,23 @@ location / {
 ```
 
 Set `BASE_URL` on the container to the public URL the browser sees (e.g. `https://bins.example.com`) — the app uses it, not the forwarded headers, to build any absolute link (QR codes, etc.).
+
+## Local HTTPS for LAN testing (camera/QR scan)
+
+Camera access (`getUserMedia`, used by the QR scanner) requires a secure
+context — HTTPS, or `http://localhost`. Neither applies when testing from a
+phone at `http://<lan-ip>:8000`, so there's an opt-in `tls-proxy` service
+(self-signed cert, not started by a plain `docker compose up`):
+
+```
+scripts/gen-dev-cert.sh              # auto-detects your LAN IP
+# or: scripts/gen-dev-cert.sh 192.168.1.42
+docker compose --profile tls up -d --build
+```
+
+Then visit `https://<your-lan-ip>` from your phone (default HTTPS port,
+no `:8000`). You'll get a certificate warning since it's self-signed —
+accept it once ("Advanced" → "Accept the Risk and Continue" in Firefox).
+The cert/key land in `tls/` and are gitignored; only `tls/nginx.conf` and
+the generator script are tracked. This is dev-only scaffolding — production
+TLS is the external nginx described above, not this proxy.
