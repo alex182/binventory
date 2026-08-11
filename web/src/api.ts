@@ -91,6 +91,31 @@ export function deleteBin(id: number): Promise<void> {
   return request<void>(`/bins/${id}`, { method: "DELETE" });
 }
 
+export interface GridCell {
+  stack_id: number;
+  grid_row: number;
+  grid_col: number;
+  bin_count: number;
+  top_bin: Bin | null;
+}
+
+export interface Grid {
+  rows: number;
+  cols: number;
+  cells: GridCell[];
+}
+
+export function createGrid(siteId: number, rows: number, cols: number): Promise<Location[]> {
+  return request<Location[]>(`/locations/${siteId}/grid`, {
+    method: "POST",
+    body: JSON.stringify({ rows, cols }),
+  });
+}
+
+export function getGrid(siteId: number): Promise<Grid> {
+  return request<Grid>(`/locations/${siteId}/grid`);
+}
+
 function locationLabel(loc: Location): string {
   if (loc.kind === "stack" && loc.grid_row != null && loc.grid_col != null) {
     return `R${loc.grid_row}C${loc.grid_col}`;

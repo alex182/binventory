@@ -28,6 +28,11 @@ class LocationUpdate(BaseModel):
     grid_col: Optional[int] = None
 
 
+class GridCreate(BaseModel):
+    rows: int
+    cols: int
+
+
 def validate_hierarchy(
     session: Session, kind: str, parent_id: Optional[int]
 ) -> Optional[Location]:
@@ -115,6 +120,77 @@ def location_bins(location_id: int):
         data["is_buried"] = is_buried(b)
         result.append(data)
     return result
+
+
+@router.post("/{site_id}/grid", response_model=list[Location])
+def create_grid(site_id: int, payload: GridCreate):
+    with Session(engine) as session:
+        site = session.get(Location, site_id)
+        if site is None:
+            raise HTTPException(status_code=404, detail="site not found")
+        existing = {
+            (s.grid_row, s.grid_col): s
+            for s in session.exec(
+                select(Location).where(
+                    Location.parent_id == site_id, Location.kind == "stack"
+                )
+            ).all()
+        }
+        new_stacks = []
+        for r in range(1, payload.rows + 1):
+            for c in range(1, payload.cols + 1):
+                if (r, c) in existing:
+                    continue
+                stack = Location(
+                    name=f"R{r}C{c}",
+                    kind="stack",
+                    parent_id=site_id,
+                    grid_row=r,
+                    grid_col=c,
+                )
+                session.add(stack)
+                new_stacks.append(stack)
+        session.commit()
+        for stack in new_stacks:
+            session.refresh(stack)
+        return list(existing.values()) + new_stacks
+
+
+@router.get("/{site_id}/grid")
+def get_grid(site_id: int):
+    with Session(engine) as session:
+        site = session.get(Location, site_id)
+        if site is None:
+            raise HTTPException(status_code=404, detail="site not found")
+        stacks = session.exec(
+            select(Location).where(
+                Location.parent_id == site_id,
+                Location.kind == "stack",
+                Location.grid_row.is_not(None),
+                Location.grid_col.is_not(None),
+            )
+        ).all()
+
+        rows = max((s.grid_row for s in stacks), default=0)
+        cols = max((s.grid_col for s in stacks), default=0)
+
+        cells = []
+        for s in stacks:
+            bins = session.exec(
+                select(Bin).where(Bin.location_id == s.id, Bin.status != "blank")
+            ).all()
+            positioned = [b for b in bins if b.stack_position is not None]
+            top_bin = max(positioned, key=lambda b: b.stack_position) if positioned else None
+            cells.append(
+                {
+                    "stack_id": s.id,
+                    "grid_row": s.grid_row,
+                    "grid_col": s.grid_col,
+                    "bin_count": len(bins),
+                    "top_bin": top_bin.model_dump() if top_bin else None,
+                }
+            )
+        return {"rows": rows, "cols": cols, "cells": cells}
 
 
 @router.post("", response_model=Location, status_code=201)

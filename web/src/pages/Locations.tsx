@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Bin, BinWithBuried, Location, LocationTreeNode, getLocationTree, listLocations } from "../api";
 import BinForm from "./BinForm";
+import GridView from "./GridView";
 import LocationDetail from "./LocationDetail";
 
 function nodeLabel(node: Location): string {
@@ -45,6 +46,10 @@ export default function Locations() {
   const [editingBin, setEditingBin] = useState<Bin | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [refreshToken, setRefreshToken] = useState(0);
+  const [view, setView] = useState<"bins" | "grid">("bins");
+
+  const selectedLocation = locations.find((l) => l.id === selectedId) ?? null;
+  const isSite = selectedLocation?.kind === "site";
 
   async function refreshTree() {
     const [t, l] = await Promise.all([getLocationTree(), listLocations()]);
@@ -56,13 +61,18 @@ export default function Locations() {
     refreshTree();
   }, []);
 
+  function selectLocation(id: number) {
+    setSelectedId(id);
+    setView("bins");
+  }
+
   return (
     <div className="locations-page">
       <aside>
         <h2>Locations</h2>
         <ul className="tree">
           {tree.map((node) => (
-            <TreeNode key={node.id} node={node} selectedId={selectedId} onSelect={setSelectedId} />
+            <TreeNode key={node.id} node={node} selectedId={selectedId} onSelect={selectLocation} />
           ))}
         </ul>
       </aside>
@@ -72,23 +82,39 @@ export default function Locations() {
           <p>Select a location to see its bins.</p>
         ) : (
           <>
-            <button
-              onClick={() => {
-                setEditingBin(null);
-                setShowForm(true);
-              }}
-            >
-              + New bin here
-            </button>
-            <LocationDetail
-              locationId={selectedId}
-              locations={locations}
-              refreshToken={refreshToken}
-              onSelectBin={(bin: BinWithBuried) => {
-                setEditingBin(bin);
-                setShowForm(true);
-              }}
-            />
+            {isSite && (
+              <div className="view-toggle">
+                <button disabled={view === "bins"} onClick={() => setView("bins")}>
+                  Bins
+                </button>
+                <button disabled={view === "grid"} onClick={() => setView("grid")}>
+                  Grid view
+                </button>
+              </div>
+            )}
+            {view === "grid" && isSite ? (
+              <GridView siteId={selectedId} onSelectStack={selectLocation} onGridChanged={refreshTree} />
+            ) : (
+              <>
+                <button
+                  onClick={() => {
+                    setEditingBin(null);
+                    setShowForm(true);
+                  }}
+                >
+                  + New bin here
+                </button>
+                <LocationDetail
+                  locationId={selectedId}
+                  locations={locations}
+                  refreshToken={refreshToken}
+                  onSelectBin={(bin: BinWithBuried) => {
+                    setEditingBin(bin);
+                    setShowForm(true);
+                  }}
+                />
+              </>
+            )}
           </>
         )}
         {showForm && (
