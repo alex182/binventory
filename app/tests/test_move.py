@@ -4,8 +4,11 @@ import tempfile
 os.environ["DATA_DIR"] = tempfile.mkdtemp()
 
 from fastapi.testclient import TestClient  # noqa: E402
+from sqlmodel import Session, select  # noqa: E402
 
+from db import engine  # noqa: E402
 from main import app  # noqa: E402
+from models import MoveLog  # noqa: E402
 
 client = TestClient(app)
 
@@ -61,3 +64,21 @@ def test_move_stack_preserves_internal_order():
     assert top_after["location_id"] == dest_stack_id
     assert bottom_after["stack_position"] == 1
     assert top_after["stack_position"] == 2
+
+
+def test_move_creates_exactly_one_move_log_row():
+    _, stack_id = make_zone_and_stack("Zone Log", "Stack Log")
+    bin_ = client.post("/api/bins", json={"label": "Logged"}).json()
+
+    resp = client.post(
+        f"/api/bins/{bin_['id']}/move",
+        json={"to_location_id": stack_id, "to_position": 1},
+    )
+    assert resp.status_code == 200
+
+    with Session(engine) as session:
+        logs = session.exec(select(MoveLog).where(MoveLog.bin_id == bin_["id"])).all()
+    assert len(logs) == 1
+    assert logs[0].from_location_id is None
+    assert logs[0].to_location_id == stack_id
+    assert logs[0].to_position == 1

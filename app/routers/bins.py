@@ -11,7 +11,7 @@ from sqlmodel import Session, select
 
 from config import BASE_URL
 from db import engine
-from models import Bin
+from models import Bin, MoveLog
 
 router = APIRouter(prefix="/api/bins", tags=["bins"])
 
@@ -97,6 +97,27 @@ def siblings_of(session: Session, bin_: Bin) -> list[Bin]:
     if bin_.location_id is None:
         return []
     return session.exec(select(Bin).where(Bin.location_id == bin_.location_id)).all()
+
+
+def log_move(
+    session: Session,
+    bin_: Bin,
+    from_location_id: Optional[int],
+    from_position: Optional[int],
+    to_location_id: Optional[int],
+    to_position: Optional[int],
+) -> None:
+    if from_location_id == to_location_id and from_position == to_position:
+        return
+    session.add(
+        MoveLog(
+            bin_id=bin_.id,
+            from_location_id=from_location_id,
+            to_location_id=to_location_id,
+            from_position=from_position,
+            to_position=to_position,
+        )
+    )
 
 
 @router.get("")
@@ -240,9 +261,13 @@ def move_bin(bin_id: int, payload: MoveBinPayload):
         bin_ = session.get(Bin, bin_id)
         if bin_ is None:
             raise HTTPException(status_code=404, detail="not found")
+        from_location_id, from_position = bin_.location_id, bin_.stack_position
         bin_.location_id = payload.to_location_id
         bin_.stack_position = payload.to_position
         session.add(bin_)
+        log_move(
+            session, bin_, from_location_id, from_position, payload.to_location_id, payload.to_position
+        )
         session.commit()
         session.refresh(bin_)
         return serialize_bin(bin_, siblings_of(session, bin_))
@@ -255,9 +280,11 @@ def reorder_stack(stack_id: int, payload: ReorderPayload):
             bin_ = session.get(Bin, bin_id)
             if bin_ is None:
                 raise HTTPException(status_code=404, detail=f"bin {bin_id} not found")
+            from_location_id, from_position = bin_.location_id, bin_.stack_position
             bin_.location_id = stack_id
             bin_.stack_position = position
             session.add(bin_)
+            log_move(session, bin_, from_location_id, from_position, stack_id, position)
         session.commit()
         bins = session.exec(select(Bin).where(Bin.location_id == stack_id)).all()
         bins.sort(key=lambda b: b.stack_position or 0)
@@ -269,8 +296,10 @@ def move_stack(stack_id: int, payload: MoveStackPayload):
     with Session(engine) as session:
         bins = session.exec(select(Bin).where(Bin.location_id == stack_id)).all()
         for bin_ in bins:
+            from_position = bin_.stack_position
             bin_.location_id = payload.to_location_id
             session.add(bin_)
+            log_move(session, bin_, stack_id, from_position, payload.to_location_id, from_position)
         session.commit()
 
         moved = session.exec(
