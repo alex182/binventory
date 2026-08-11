@@ -6,6 +6,7 @@ import {
   MoveLogEntry,
   binAddress,
   createItem,
+  deleteBin,
   deleteItem,
   getBinByCode,
   getBinHistory,
@@ -208,6 +209,18 @@ export default function BinDetail({ code }: Props) {
       )}
       <HistorySection binId={bin.id} refreshToken={historyRefreshToken} />
       <button onClick={() => navigate("/")}>Back to locations</button>
+      <button
+        className="delete-bin"
+        onClick={async () => {
+          if (!window.confirm(`Delete "${bin.label || bin.code}"? This can't be undone.`)) {
+            return;
+          }
+          await deleteBin(bin.id);
+          navigate("/");
+        }}
+      >
+        Delete bin
+      </button>
     </div>
   );
 }

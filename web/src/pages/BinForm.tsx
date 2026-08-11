@@ -1,5 +1,6 @@
 import { FormEvent, useState } from "react";
 import { Bin, BinInput, Fullness, Location, createBin, updateBin } from "../api";
+import PhotoGrid from "../components/PhotoGrid";
 
 const FULLNESS_OPTIONS: { value: Fullness; label: string }[] = [
   { value: "empty", label: "Empty" },
@@ -46,6 +47,7 @@ export default function BinForm({ bin, locations, defaultLocationId, onCancel, o
   const [locationNote, setLocationNote] = useState(bin?.location_note ?? "");
   const [notes, setNotes] = useState(bin?.notes ?? "");
   const [error, setError] = useState<string | null>(null);
+  const [savedBin, setSavedBin] = useState<Bin | null>(null);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -60,10 +62,25 @@ export default function BinForm({ bin, locations, defaultLocationId, onCancel, o
     };
     try {
       const result = bin ? await updateBin(bin.id, payload) : await createBin(payload);
-      onSaved(result);
+      setSavedBin(result);
     } catch (err) {
       setError((err as Error).message);
     }
+  }
+
+  if (savedBin) {
+    return (
+      <div className="bin-form">
+        <h3>{bin ? "Bin updated" : "Bin created"}</h3>
+        <p>{savedBin.label || savedBin.code}</p>
+        <PhotoGrid binId={savedBin.id} />
+        <div className="actions">
+          <button type="button" onClick={() => onSaved(savedBin)}>
+            Done
+          </button>
+        </div>
+      </div>
+    );
   }
 
   return (

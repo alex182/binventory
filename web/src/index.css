@@ -154,6 +154,12 @@ ul {
   color: #b3261e;
 }
 
+.delete-bin {
+  color: #b3261e;
+  border-color: #b3261e;
+  margin-left: 8px;
+}
+
 .locations-page {
   display: flex;
   flex-direction: column;
