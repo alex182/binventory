@@ -1,0 +1,10 @@
+{
+  "name": "binventory-dev",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "workspaceFolder": "/workspace",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind",
+  "forwardPorts": [8000],
+  "postCreateCommand": "bash -lc 'if [ -f app/requirements.txt ]; then pip install --no-cache-dir -r app/requirements.txt; fi; if [ -f web/package.json ]; then (cd web && npm install); fi'"
+}
