@@ -6,7 +6,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
 from db import init_db
-from routers import bins, items, loans, locations, photos, search
+from routers import bins, export, items, loans, locations, photos, search
 
 
 class SpacedJSONResponse(JSONResponse):
@@ -32,6 +32,7 @@ app.include_router(items.router)
 app.include_router(loans.router)
 app.include_router(photos.router)
 app.include_router(search.router)
+app.include_router(export.router)
 
 
 STATIC_DIR = Path(__file__).parent / "static"
