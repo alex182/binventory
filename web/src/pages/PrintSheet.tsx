@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Bin, Location, binAddress, listBins, listLocations } from "../api";
+import { Bin, Location, batchCreateBins, binAddress, listBins, listLocations } from "../api";
 import "./PrintSheet.css";
 
 const LABELS_PER_SHEET = 30;
@@ -14,11 +14,26 @@ export default function PrintSheet() {
   const [locations, setLocations] = useState<Location[]>([]);
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [copies, setCopies] = useState(3);
+  const [batchCount, setBatchCount] = useState(10);
+
+  function refreshBins() {
+    listBins({ include_blank: true }).then(setBins);
+  }
 
   useEffect(() => {
-    listBins({ include_blank: true }).then(setBins);
+    refreshBins();
     listLocations().then(setLocations);
   }, []);
+
+  async function handleBatchGenerate() {
+    const created = await batchCreateBins(batchCount);
+    refreshBins();
+    setSelected((prev) => {
+      const next = new Set(prev);
+      for (const bin of created) next.add(bin.id);
+      return next;
+    });
+  }
 
   function toggle(id: number) {
     setSelected((prev) => {
@@ -47,6 +62,20 @@ export default function PrintSheet() {
     <div className="print-sheet-page">
       <div className="controls no-print">
         <h2>Print label sheets</h2>
+        <div className="batch-generate">
+          <label>
+            Generate blank codes
+            <input
+              type="number"
+              min={1}
+              value={batchCount}
+              onChange={(e) => setBatchCount(Math.max(1, Number(e.target.value) || 1))}
+            />
+          </label>
+          <button type="button" onClick={handleBatchGenerate}>
+            Generate
+          </button>
+        </div>
         <label>
           Copies per bin
           <input

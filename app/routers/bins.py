@@ -34,6 +34,19 @@ class BinUpdate(BaseModel):
     notes: Optional[str] = None
 
 
+class BatchCreate(BaseModel):
+    count: int
+
+
+class ClaimPayload(BaseModel):
+    label: str
+    location_id: Optional[int] = None
+    stack_position: Optional[int] = None
+    fullness: str = "room"
+    location_note: str = ""
+    notes: str = ""
+
+
 def generate_code(session: Session) -> str:
     while True:
         code = base64.b32encode(os.urandom(5)).decode("ascii").lower()
@@ -50,6 +63,12 @@ def list_bins(location_id: Optional[int] = None, include_blank: bool = False):
         if not include_blank:
             query = query.where(Bin.status != "blank")
         return session.exec(query).all()
+
+
+@router.get("/blank", response_model=list[Bin])
+def list_blank_bins():
+    with Session(engine) as session:
+        return session.exec(select(Bin).where(Bin.status == "blank")).all()
 
 
 @router.get("/{bin_id}", response_model=Bin)
@@ -101,6 +120,37 @@ def bin_qr_svg(bin_id: int):
 def create_bin(payload: BinCreate):
     with Session(engine) as session:
         bin_ = Bin(code=generate_code(session), **payload.model_dump())
+        session.add(bin_)
+        session.commit()
+        session.refresh(bin_)
+        return bin_
+
+
+@router.post("/batch", response_model=list[Bin])
+def batch_create_bins(payload: BatchCreate):
+    with Session(engine) as session:
+        bins = []
+        for _ in range(payload.count):
+            bin_ = Bin(code=generate_code(session), label="", status="blank")
+            session.add(bin_)
+            bins.append(bin_)
+        session.commit()
+        for bin_ in bins:
+            session.refresh(bin_)
+        return bins
+
+
+@router.post("/{bin_id}/claim", response_model=Bin)
+def claim_bin(bin_id: int, payload: ClaimPayload):
+    with Session(engine) as session:
+        bin_ = session.get(Bin, bin_id)
+        if bin_ is None:
+            raise HTTPException(status_code=404, detail="not found")
+        if bin_.status != "blank":
+            raise HTTPException(status_code=409, detail="already active")
+        for field, value in payload.model_dump().items():
+            setattr(bin_, field, value)
+        bin_.status = "active"
         session.add(bin_)
         session.commit()
         session.refresh(bin_)

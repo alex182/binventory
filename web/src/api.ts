@@ -98,6 +98,21 @@ export function deleteBin(id: number): Promise<void> {
   return request<void>(`/bins/${id}`, { method: "DELETE" });
 }
 
+export function batchCreateBins(count: number): Promise<Bin[]> {
+  return request<Bin[]>("/bins/batch", {
+    method: "POST",
+    body: JSON.stringify({ count }),
+  });
+}
+
+export function listBlankBins(): Promise<Bin[]> {
+  return request<Bin[]>("/bins/blank");
+}
+
+export function claimBin(id: number, data: BinInput): Promise<Bin> {
+  return request<Bin>(`/bins/${id}/claim`, { method: "POST", body: JSON.stringify(data) });
+}
+
 export interface GridCell {
   stack_id: number;
   grid_row: number;

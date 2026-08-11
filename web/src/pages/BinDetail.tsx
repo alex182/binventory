@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Bin, Location, binAddress, getBinByCode, listLocations } from "../api";
 import { navigate } from "../router";
+import ClaimBin from "./ClaimBin";
 
 interface Props {
   code: string;
@@ -32,12 +33,7 @@ export default function BinDetail({ code }: Props) {
   }
 
   if (bin.status === "blank") {
-    return (
-      <div className="bin-detail blank">
-        <p>This tote (code {bin.code}) hasn't been claimed yet.</p>
-        <button onClick={() => navigate("/")}>Back to locations</button>
-      </div>
-    );
+    return <ClaimBin bin={bin} locations={locations} onClaimed={setBin} />;
   }
 
   return (
