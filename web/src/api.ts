@@ -13,6 +13,12 @@ export interface LocationTreeNode extends Location {
 
 export type Fullness = "empty" | "room" | "full";
 
+export const FULLNESS_OPTIONS: { value: Fullness; label: string }[] = [
+  { value: "empty", label: "Empty" },
+  { value: "room", label: "Has room" },
+  { value: "full", label: "Full" },
+];
+
 export interface Bin {
   id: number;
   code: string;
@@ -285,6 +291,21 @@ function locationLabel(loc: Location): string {
     return `R${loc.grid_row}C${loc.grid_col}`;
   }
   return loc.name;
+}
+
+function locationDepth(locations: Location[], loc: Location): number {
+  const byId = new Map(locations.map((l) => [l.id, l]));
+  let depth = 0;
+  let current: Location | undefined = loc;
+  while (current?.parent_id != null) {
+    depth += 1;
+    current = byId.get(current.parent_id);
+  }
+  return depth;
+}
+
+export function locationOptionLabel(locations: Location[], loc: Location): string {
+  return `${"— ".repeat(locationDepth(locations, loc))}${locationLabel(loc)}`;
 }
 
 export function locationPath(locations: Location[], locationId: number | null): string {

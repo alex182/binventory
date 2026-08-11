@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Bin, BinWithBuried, Location, LocationTreeNode, getLocationTree, listLocations } from "../api";
+import { Bin, Location, LocationTreeNode, getLocationTree, listLocations } from "../api";
+import { navigate } from "../router";
 import BinForm from "./BinForm";
 import GridView from "./GridView";
 import LocationDetail from "./LocationDetail";
@@ -43,7 +44,6 @@ export default function Locations() {
   const [tree, setTree] = useState<LocationTreeNode[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
-  const [editingBin, setEditingBin] = useState<Bin | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [refreshToken, setRefreshToken] = useState(0);
   const [view, setView] = useState<"bins" | "grid">("bins");
@@ -67,10 +67,8 @@ export default function Locations() {
     setView("bins");
   }
 
-  async function closeFormAndRefresh() {
-    setShowForm(false);
-    await refreshTree();
-    setRefreshToken((t) => t + 1);
+  function goToBin(bin: Bin) {
+    navigate(`/b/${bin.code}`);
   }
 
   return (
@@ -103,14 +101,7 @@ export default function Locations() {
               <GridView siteId={selectedId} onSelectStack={selectLocation} onGridChanged={refreshTree} />
             ) : (
               <>
-                <button
-                  onClick={() => {
-                    setEditingBin(null);
-                    setShowForm(true);
-                  }}
-                >
-                  + New bin here
-                </button>
+                <button onClick={() => setShowForm(true)}>+ New bin here</button>
                 <label className="empty-filter">
                   <input
                     type="checkbox"
@@ -124,10 +115,7 @@ export default function Locations() {
                   locations={locations}
                   refreshToken={refreshToken}
                   emptyOnly={emptyOnly}
-                  onSelectBin={(bin: BinWithBuried) => {
-                    setEditingBin(bin);
-                    setShowForm(true);
-                  }}
+                  onSelectBin={goToBin}
                 />
               </>
             )}
@@ -135,12 +123,13 @@ export default function Locations() {
         )}
         {showForm && (
           <BinForm
-            bin={editingBin}
             locations={locations}
             defaultLocationId={selectedId}
             onCancel={() => setShowForm(false)}
-            onSaved={closeFormAndRefresh}
-            onDeleted={closeFormAndRefresh}
+            onSaved={(savedBin) => {
+              setShowForm(false);
+              goToBin(savedBin);
+            }}
           />
         )}
       </main>
