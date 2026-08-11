@@ -1,13 +1,20 @@
+import json
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
 from db import init_db
-from routers import locations
+from routers import bins, locations
 
-app = FastAPI()
+
+class SpacedJSONResponse(JSONResponse):
+    def render(self, content) -> bytes:
+        return json.dumps(content, ensure_ascii=False).encode("utf-8")
+
+
+app = FastAPI(default_response_class=SpacedJSONResponse)
 app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
 
 init_db()
@@ -19,6 +26,7 @@ def health():
 
 
 app.include_router(locations.router)
+app.include_router(bins.router)
 
 
 STATIC_DIR = Path(__file__).parent / "static"
