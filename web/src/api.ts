@@ -113,6 +113,41 @@ export function claimBin(id: number, data: BinInput): Promise<Bin> {
   return request<Bin>(`/bins/${id}/claim`, { method: "POST", body: JSON.stringify(data) });
 }
 
+export interface Item {
+  id: number;
+  bin_id: number;
+  name: string;
+  qty: number;
+  notes: string;
+  loaned_to: string | null;
+  loaned_at: string | null;
+}
+
+export interface ItemInput {
+  name: string;
+  qty: number;
+  notes: string;
+}
+
+export function listItems(binId: number): Promise<Item[]> {
+  return request<Item[]>(`/bins/${binId}/items`);
+}
+
+export function createItem(binId: number, data: ItemInput): Promise<Item> {
+  return request<Item>(`/bins/${binId}/items`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export function updateItem(id: number, data: Partial<ItemInput>): Promise<Item> {
+  return request<Item>(`/items/${id}`, { method: "PATCH", body: JSON.stringify(data) });
+}
+
+export function deleteItem(id: number): Promise<void> {
+  return request<void>(`/items/${id}`, { method: "DELETE" });
+}
+
 export interface GridCell {
   stack_id: number;
   grid_row: number;
