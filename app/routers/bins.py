@@ -1,11 +1,15 @@
 import base64
+import io
 import os
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException
+import qrcode
+import qrcode.image.svg
+from fastapi import APIRouter, HTTPException, Response
 from pydantic import BaseModel
 from sqlmodel import Session, select
 
+from config import BASE_URL
 from db import engine
 from models import Bin
 
@@ -55,6 +59,33 @@ def get_bin(bin_id: int):
         if bin_ is None:
             raise HTTPException(status_code=404, detail="not found")
         return bin_
+
+
+def get_bin_or_404(session: Session, bin_id: int) -> Bin:
+    bin_ = session.get(Bin, bin_id)
+    if bin_ is None:
+        raise HTTPException(status_code=404, detail="not found")
+    return bin_
+
+
+@router.get("/{bin_id}/qr.png")
+def bin_qr_png(bin_id: int):
+    with Session(engine) as session:
+        code = get_bin_or_404(session, bin_id).code
+    img = qrcode.make(f"{BASE_URL}/b/{code}")
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    return Response(content=buf.getvalue(), media_type="image/png")
+
+
+@router.get("/{bin_id}/qr.svg")
+def bin_qr_svg(bin_id: int):
+    with Session(engine) as session:
+        code = get_bin_or_404(session, bin_id).code
+    img = qrcode.make(f"{BASE_URL}/b/{code}", image_factory=qrcode.image.svg.SvgImage)
+    buf = io.BytesIO()
+    img.save(buf)
+    return Response(content=buf.getvalue(), media_type="image/svg+xml")
 
 
 @router.post("", response_model=Bin, status_code=201)
