@@ -47,6 +47,16 @@ class ClaimPayload(BaseModel):
     notes: str = ""
 
 
+class ReorderPayload(BaseModel):
+    ordered_bin_ids: list[int]
+
+
+# Reorder is a location-scoped route (/api/locations/{stack_id}/reorder), not
+# a /api/bins one, so it needs its own unprefixed router even though it lives
+# in this file per the ticket's Files list.
+stack_router = APIRouter(tags=["bins"])
+
+
 def generate_code(session: Session) -> str:
     while True:
         code = base64.b32encode(os.urandom(5)).decode("ascii").lower()
@@ -179,3 +189,18 @@ def delete_bin(bin_id: int):
             raise HTTPException(status_code=404, detail="not found")
         session.delete(bin_)
         session.commit()
+
+
+@stack_router.post("/api/locations/{stack_id}/reorder", response_model=list[Bin])
+def reorder_stack(stack_id: int, payload: ReorderPayload):
+    with Session(engine) as session:
+        for position, bin_id in enumerate(payload.ordered_bin_ids, start=1):
+            bin_ = session.get(Bin, bin_id)
+            if bin_ is None:
+                raise HTTPException(status_code=404, detail=f"bin {bin_id} not found")
+            bin_.location_id = stack_id
+            bin_.stack_position = position
+            session.add(bin_)
+        session.commit()
+        bins = session.exec(select(Bin).where(Bin.location_id == stack_id)).all()
+        return sorted(bins, key=lambda b: b.stack_position or 0)

@@ -27,6 +27,7 @@ def health():
 
 app.include_router(locations.router)
 app.include_router(bins.router)
+app.include_router(bins.stack_router)
 app.include_router(items.router)
 app.include_router(loans.router)
 app.include_router(search.router)
