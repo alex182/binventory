@@ -150,6 +150,12 @@ ul {
   font-size: 0.9rem;
 }
 
+.hint {
+  color: #777;
+  font-size: 0.8rem;
+  margin: 4px 0;
+}
+
 .error {
   color: #b3261e;
 }

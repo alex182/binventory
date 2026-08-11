@@ -94,6 +94,7 @@ export default function BinForm({
       <div className="bin-form">
         <h3>{bin ? "Bin updated" : "Bin created"}</h3>
         <p>{savedBin.label || savedBin.code}</p>
+        <h4>Add photos</h4>
         <PhotoGrid binId={savedBin.id} />
         <div className="actions">
           <button type="button" onClick={() => onSaved(savedBin)}>
@@ -162,8 +163,11 @@ export default function BinForm({
         <textarea value={notes} onChange={(e) => setNotes(e.target.value)} />
       </label>
       {error && <p className="error">{error}</p>}
+      <p className="hint">
+        {bin ? "You can update photos after saving." : "You'll be able to add photos after saving."}
+      </p>
       <div className="actions">
-        <button type="submit">Save</button>
+        <button type="submit">{bin ? "Save" : "Save & add photos"}</button>
         <button type="button" onClick={onCancel}>
           Cancel
         </button>
