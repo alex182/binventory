@@ -1,3 +1,4 @@
+import ErrorBoundary from "./components/ErrorBoundary";
 import SearchBar from "./components/SearchBar";
 import BinDetail from "./pages/BinDetail";
 import Loans from "./pages/Loans";
@@ -35,7 +36,7 @@ export default function App() {
       <div className="no-print">
         <SearchBar />
       </div>
-      {content}
+      <ErrorBoundary key={path}>{content}</ErrorBoundary>
     </div>
   );
 }
