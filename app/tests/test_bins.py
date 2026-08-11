@@ -42,3 +42,13 @@ def test_update_and_delete_bin():
 
     client.delete(f"/api/bins/{bin_id}")
     assert client.get(f"/api/bins/{bin_id}").status_code == 404
+
+
+def test_get_bin_by_code():
+    bin_ = client.post("/api/bins", json={"label": "Findable"}).json()
+
+    resp = client.get(f"/api/bins/by-code/{bin_['code']}")
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "active"
+
+    assert client.get("/api/bins/by-code/zzzznope").status_code == 404

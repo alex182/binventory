@@ -79,6 +79,13 @@ export function getLocationBins(locationId: number): Promise<BinWithBuried[]> {
   return request<BinWithBuried[]>(`/locations/${locationId}/bins`);
 }
 
+export async function getBinByCode(code: string): Promise<Bin | null> {
+  const resp = await fetch(`/api/bins/by-code/${encodeURIComponent(code)}`);
+  if (resp.status === 404) return null;
+  if (!resp.ok) throw new Error(`Request failed: ${resp.status}`);
+  return resp.json();
+}
+
 export function createBin(data: BinInput): Promise<Bin> {
   return request<Bin>("/bins", { method: "POST", body: JSON.stringify(data) });
 }

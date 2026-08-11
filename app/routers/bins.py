@@ -61,6 +61,15 @@ def get_bin(bin_id: int):
         return bin_
 
 
+@router.get("/by-code/{code}", response_model=Bin)
+def get_bin_by_code(code: str):
+    with Session(engine) as session:
+        bin_ = session.exec(select(Bin).where(Bin.code == code)).first()
+        if bin_ is None:
+            raise HTTPException(status_code=404, detail="not found")
+        return bin_
+
+
 def get_bin_or_404(session: Session, bin_id: int) -> Bin:
     bin_ = session.get(Bin, bin_id)
     if bin_ is None:
