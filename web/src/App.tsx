@@ -1,5 +1,6 @@
 import ErrorBoundary from "./components/ErrorBoundary";
 import SearchBar from "./components/SearchBar";
+import ThemeToggle from "./components/ThemeToggle";
 import BinDetail from "./pages/BinDetail";
 import Loans from "./pages/Loans";
 import Locations from "./pages/Locations";
@@ -32,6 +33,7 @@ export default function App() {
         <button onClick={() => navigate("/scan")}>Scan</button>
         <button onClick={() => navigate("/print")}>Print labels</button>
         <button onClick={() => navigate("/loans")}>Loans</button>
+        <ThemeToggle />
       </nav>
       <div className="no-print">
         <SearchBar />

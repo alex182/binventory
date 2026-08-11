@@ -1,3 +1,95 @@
+:root {
+  --bg: #fafafa;
+  --fg: #1a1a1a;
+  --muted: #666666;
+  --muted-light: #777777;
+  --label: #444444;
+  --card-bg: #ffffff;
+  --input-bg: #ffffff;
+  --border: #cccccc;
+  --border-light: #dddddd;
+  --border-lighter: #eeeeee;
+  --selected-bg: #1a1a1a;
+  --selected-fg: #ffffff;
+  --empty-cell: #aaaaaa;
+
+  --badge-bg: #eeeeee;
+  --badge-fg: #333333;
+  --badge-buried-bg: #fde2b8;
+  --badge-buried-fg: #7a4b00;
+  --badge-loaned-bg: #d8e6ff;
+  --badge-loaned-fg: #1a3d7a;
+  --badge-empty-bg: #e6f4ea;
+  --badge-empty-fg: #1e6b34;
+  --badge-room-bg: #eeeeff;
+  --badge-room-fg: #333333;
+  --badge-full-bg: #fde2e2;
+  --badge-full-fg: #8a1f1f;
+  --error: #b3261e;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #17181a;
+    --fg: #e8e8e8;
+    --muted: #a0a0a0;
+    --muted-light: #909090;
+    --label: #b0b0b0;
+    --card-bg: #202124;
+    --input-bg: #26272b;
+    --border: #3a3b3e;
+    --border-light: #333438;
+    --border-lighter: #2a2b2e;
+    --selected-bg: #e8e8e8;
+    --selected-fg: #17181a;
+    --empty-cell: #6a6b6e;
+
+    --badge-bg: #2e2f33;
+    --badge-fg: #d8d8d8;
+    --badge-buried-bg: #4a3413;
+    --badge-buried-fg: #f3c98a;
+    --badge-loaned-bg: #1c3252;
+    --badge-loaned-fg: #a9c6f5;
+    --badge-empty-bg: #17331f;
+    --badge-empty-fg: #8fd6a3;
+    --badge-room-bg: #2a2b3d;
+    --badge-room-fg: #cfcfe6;
+    --badge-full-bg: #3a1f1f;
+    --badge-full-fg: #f0a8a8;
+    --error: #ff6b60;
+  }
+}
+
+:root[data-theme="dark"] {
+  --bg: #17181a;
+  --fg: #e8e8e8;
+  --muted: #a0a0a0;
+  --muted-light: #909090;
+  --label: #b0b0b0;
+  --card-bg: #202124;
+  --input-bg: #26272b;
+  --border: #3a3b3e;
+  --border-light: #333438;
+  --border-lighter: #2a2b2e;
+  --selected-bg: #e8e8e8;
+  --selected-fg: #17181a;
+  --empty-cell: #6a6b6e;
+
+  --badge-bg: #2e2f33;
+  --badge-fg: #d8d8d8;
+  --badge-buried-bg: #4a3413;
+  --badge-buried-fg: #f3c98a;
+  --badge-loaned-bg: #1c3252;
+  --badge-loaned-fg: #a9c6f5;
+  --badge-empty-bg: #17331f;
+  --badge-empty-fg: #8fd6a3;
+  --badge-room-bg: #2a2b3d;
+  --badge-room-fg: #cfcfe6;
+  --badge-full-bg: #3a1f1f;
+  --badge-full-fg: #f0a8a8;
+  --error: #ff6b60;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -5,8 +97,8 @@
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  color: #1a1a1a;
-  background: #fafafa;
+  color: var(--fg);
+  background: var(--bg);
 }
 
 #root {
@@ -36,13 +128,18 @@ nav {
   margin-bottom: 12px;
 }
 
+.theme-toggle {
+  margin-left: auto;
+}
+
 button,
 input[type="submit"] {
   min-height: 40px;
   padding: 8px 14px;
-  border: 1px solid #ccc;
+  border: 1px solid var(--border);
   border-radius: 6px;
-  background: #fff;
+  background: var(--card-bg);
+  color: var(--fg);
   font-size: 0.95rem;
   cursor: pointer;
 }
@@ -54,9 +151,9 @@ button:disabled {
 
 button.selected,
 button[class~="selected"] {
-  background: #1a1a1a;
-  color: #fff;
-  border-color: #1a1a1a;
+  background: var(--selected-bg);
+  color: var(--selected-fg);
+  border-color: var(--selected-bg);
 }
 
 input,
@@ -64,8 +161,10 @@ select,
 textarea {
   min-height: 40px;
   padding: 8px 10px;
-  border: 1px solid #ccc;
+  border: 1px solid var(--border);
   border-radius: 6px;
+  background: var(--input-bg);
+  color: var(--fg);
   font-size: 0.95rem;
   width: 100%;
   max-width: 100%;
@@ -78,7 +177,7 @@ textarea {
 label {
   display: block;
   font-size: 0.85rem;
-  color: #444;
+  color: var(--label);
   margin: 8px 0 4px;
 }
 
@@ -90,7 +189,7 @@ ul {
 
 .tree ul {
   padding-left: 16px;
-  border-left: 1px dashed #ddd;
+  border-left: 1px dashed var(--border-light);
   margin-left: 8px;
 }
 
@@ -108,7 +207,7 @@ ul {
   align-items: center;
   gap: 8px;
   padding: 8px 0;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--border-lighter);
 }
 
 .badge {
@@ -116,53 +215,53 @@ ul {
   padding: 2px 8px;
   border-radius: 999px;
   font-size: 0.75rem;
-  background: #eee;
-  color: #333;
+  background: var(--badge-bg);
+  color: var(--badge-fg);
 }
 
 .badge.buried {
-  background: #fde2b8;
-  color: #7a4b00;
+  background: var(--badge-buried-bg);
+  color: var(--badge-buried-fg);
 }
 
 .badge.loaned {
-  background: #d8e6ff;
-  color: #1a3d7a;
+  background: var(--badge-loaned-bg);
+  color: var(--badge-loaned-fg);
 }
 
 .badge.fullness-empty {
-  background: #e6f4ea;
-  color: #1e6b34;
+  background: var(--badge-empty-bg);
+  color: var(--badge-empty-fg);
 }
 
 .badge.fullness-room {
-  background: #eef;
-  color: #333;
+  background: var(--badge-room-bg);
+  color: var(--badge-room-fg);
 }
 
 .badge.fullness-full {
-  background: #fde2e2;
-  color: #8a1f1f;
+  background: var(--badge-full-bg);
+  color: var(--badge-full-fg);
 }
 
 .address {
-  color: #666;
+  color: var(--muted);
   font-size: 0.9rem;
 }
 
 .hint {
-  color: #777;
+  color: var(--muted-light);
   font-size: 0.8rem;
   margin: 4px 0;
 }
 
 .error {
-  color: #b3261e;
+  color: var(--error);
 }
 
 .delete-bin {
-  color: #b3261e;
-  border-color: #b3261e;
+  color: var(--error);
+  border-color: var(--error);
   margin-left: 8px;
 }
 
@@ -191,11 +290,11 @@ ul {
 .move-dialog,
 .bin-form,
 .claim-form {
-  border: 1px solid #ddd;
+  border: 1px solid var(--border-light);
   border-radius: 8px;
   padding: 12px;
   margin-top: 12px;
-  background: #fff;
+  background: var(--card-bg);
 }
 
 .move-dialog .actions,
@@ -228,8 +327,8 @@ ul {
 .search-results {
   position: absolute;
   z-index: 10;
-  background: #fff;
-  border: 1px solid #ddd;
+  background: var(--card-bg);
+  border: 1px solid var(--border-light);
   border-radius: 6px;
   width: 100%;
   max-height: 260px;
@@ -240,7 +339,7 @@ ul {
   width: 100%;
   text-align: left;
   border: none;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--border-lighter);
   border-radius: 0;
   display: flex;
   flex-direction: column;
@@ -263,7 +362,7 @@ ul {
 .empty-cell {
   display: inline-block;
   padding: 8px;
-  color: #aaa;
+  color: var(--empty-cell);
   text-align: center;
   min-width: 64px;
 }

@@ -1,4 +1,7 @@
-/* Avery 5160/8160: US Letter, 3 cols x 10 rows, 1in x 2 5/8in labels. */
+/* Avery 5160/8160: US Letter, 3 cols x 10 rows, 1in x 2 5/8in labels.
+   Always black-on-white, independent of the app theme — this prints
+   on physical paper, and a dark-mode text color would print as
+   washed-out/invisible on some browsers. */
 .sheet.avery-5160 {
   box-sizing: border-box;
   width: 8.5in;
@@ -10,6 +13,8 @@
   column-gap: 0.125in;
   row-gap: 0;
   page-break-after: always;
+  background: #ffffff;
+  color: #000000;
 }
 
 .sheet.avery-5160 .label {
