@@ -1,0 +1,59 @@
+/* Avery 5160/8160: US Letter, 3 cols x 10 rows, 1in x 2 5/8in labels. */
+.sheet.avery-5160 {
+  box-sizing: border-box;
+  width: 8.5in;
+  height: 11in;
+  padding: 0.5in 0.1875in;
+  display: grid;
+  grid-template-columns: repeat(3, 2.625in);
+  grid-template-rows: repeat(10, 1in);
+  column-gap: 0.125in;
+  row-gap: 0;
+  page-break-after: always;
+}
+
+.sheet.avery-5160 .label {
+  box-sizing: border-box;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px;
+}
+
+.label-qr {
+  width: 0.9in;
+  height: 0.9in;
+  flex-shrink: 0;
+}
+
+.label-text {
+  font-size: 8pt;
+  line-height: 1.2;
+  overflow: hidden;
+}
+
+.label-name {
+  font-weight: bold;
+}
+
+@media screen {
+  .sheet.avery-5160 {
+    margin: 0 auto 20px;
+    border: 1px dashed #ccc;
+  }
+}
+
+@media print {
+  .no-print {
+    display: none;
+  }
+  .sheet.avery-5160 {
+    border: none;
+    margin: 0;
+  }
+  @page {
+    size: letter;
+    margin: 0;
+  }
+}
