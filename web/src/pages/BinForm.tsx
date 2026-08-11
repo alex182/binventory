@@ -1,5 +1,6 @@
 import { FormEvent, useState } from "react";
 import { Bin, BinInput, Fullness, Location, createBin, deleteBin, updateBin } from "../api";
+import ItemsSection from "../components/ItemsSection";
 import PhotoGrid from "../components/PhotoGrid";
 
 const FULLNESS_OPTIONS: { value: Fullness; label: string }[] = [
@@ -94,8 +95,8 @@ export default function BinForm({
       <div className="bin-form">
         <h3>{bin ? "Bin updated" : "Bin created"}</h3>
         <p>{savedBin.label || savedBin.code}</p>
-        <h4>Add photos</h4>
         <PhotoGrid binId={savedBin.id} />
+        <ItemsSection binId={savedBin.id} />
         <div className="actions">
           <button type="button" onClick={() => onSaved(savedBin)}>
             Done
@@ -108,7 +109,12 @@ export default function BinForm({
   return (
     <form className="bin-form" onSubmit={handleSubmit}>
       <h3>{bin ? "Edit bin" : "New bin"}</h3>
-      {bin && <PhotoGrid binId={bin.id} />}
+      {bin && (
+        <>
+          <PhotoGrid binId={bin.id} />
+          <ItemsSection binId={bin.id} />
+        </>
+      )}
       <label>
         Label
         <input value={label} onChange={(e) => setLabel(e.target.value)} required />
@@ -164,9 +170,9 @@ export default function BinForm({
         <textarea value={notes} onChange={(e) => setNotes(e.target.value)} />
       </label>
       {error && <p className="error">{error}</p>}
-      {!bin && <p className="hint">You'll be able to add photos after saving.</p>}
+      {!bin && <p className="hint">You'll be able to add photos and contents after saving.</p>}
       <div className="actions">
-        <button type="submit">{bin ? "Save" : "Save & add photos"}</button>
+        <button type="submit">{bin ? "Save" : "Save & add contents"}</button>
         <button type="button" onClick={onCancel}>
           Cancel
         </button>
