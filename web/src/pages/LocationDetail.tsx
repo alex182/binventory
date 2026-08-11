@@ -31,7 +31,11 @@ export default function LocationDetail({ locationId, locations, onSelectBin, ref
         <li key={bin.id}>
           <button onClick={() => onSelectBin(bin)}>{bin.label || bin.code}</button>
           <span className={`badge fullness-${bin.fullness}`}>{FULLNESS_LABEL[bin.fullness]}</span>
-          {bin.is_buried && <span className="badge buried">Buried</span>}
+          {bin.is_buried && (
+            <span className="badge buried">
+              {bin.bins_on_top} tote{bin.bins_on_top === 1 ? "" : "s"} on top
+            </span>
+          )}
           <span className="address">{binAddress(locations, bin)}</span>
         </li>
       ))}

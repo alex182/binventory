@@ -109,15 +109,17 @@ def location_bins(location_id: int):
     )
     unpositioned = [b for b in bins if b.stack_position is None]
 
-    def is_buried(b: Bin) -> bool:
+    def bins_on_top(b: Bin) -> int:
         if b.stack_position is None:
-            return False
-        return any(other.stack_position > b.stack_position for other in positioned)
+            return 0
+        return sum(1 for other in positioned if other.stack_position > b.stack_position)
 
     result = []
     for b in positioned + unpositioned:
         data = b.model_dump()
-        data["is_buried"] = is_buried(b)
+        on_top = bins_on_top(b)
+        data["bins_on_top"] = on_top
+        data["is_buried"] = on_top > 0
         result.append(data)
     return result
 

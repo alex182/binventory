@@ -64,39 +64,73 @@ def generate_code(session: Session) -> str:
             return code
 
 
-@router.get("", response_model=list[Bin])
+def bins_on_top_count(bin_: Bin, siblings: list[Bin]) -> int:
+    if bin_.stack_position is None:
+        return 0
+    return sum(
+        1
+        for other in siblings
+        if other.id != bin_.id
+        and other.stack_position is not None
+        and other.stack_position > bin_.stack_position
+    )
+
+
+def serialize_bin(bin_: Bin, siblings: list[Bin]) -> dict:
+    data = bin_.model_dump()
+    on_top = bins_on_top_count(bin_, siblings)
+    data["bins_on_top"] = on_top
+    data["is_buried"] = on_top > 0
+    return data
+
+
+def siblings_of(session: Session, bin_: Bin) -> list[Bin]:
+    if bin_.location_id is None:
+        return []
+    return session.exec(select(Bin).where(Bin.location_id == bin_.location_id)).all()
+
+
+@router.get("")
 def list_bins(location_id: Optional[int] = None, include_blank: bool = False):
     with Session(engine) as session:
-        query = select(Bin)
+        all_bins = session.exec(select(Bin)).all()
+
+        by_location: dict[Optional[int], list[Bin]] = {}
+        for b in all_bins:
+            by_location.setdefault(b.location_id, []).append(b)
+
+        query_bins = all_bins
         if location_id is not None:
-            query = query.where(Bin.location_id == location_id)
+            query_bins = [b for b in query_bins if b.location_id == location_id]
         if not include_blank:
-            query = query.where(Bin.status != "blank")
-        return session.exec(query).all()
+            query_bins = [b for b in query_bins if b.status != "blank"]
+
+        return [serialize_bin(b, by_location.get(b.location_id, [])) for b in query_bins]
 
 
-@router.get("/blank", response_model=list[Bin])
+@router.get("/blank")
 def list_blank_bins():
     with Session(engine) as session:
-        return session.exec(select(Bin).where(Bin.status == "blank")).all()
+        bins = session.exec(select(Bin).where(Bin.status == "blank")).all()
+        return [serialize_bin(b, siblings_of(session, b)) for b in bins]
 
 
-@router.get("/{bin_id}", response_model=Bin)
+@router.get("/{bin_id}")
 def get_bin(bin_id: int):
     with Session(engine) as session:
         bin_ = session.get(Bin, bin_id)
         if bin_ is None:
             raise HTTPException(status_code=404, detail="not found")
-        return bin_
+        return serialize_bin(bin_, siblings_of(session, bin_))
 
 
-@router.get("/by-code/{code}", response_model=Bin)
+@router.get("/by-code/{code}")
 def get_bin_by_code(code: str):
     with Session(engine) as session:
         bin_ = session.exec(select(Bin).where(Bin.code == code)).first()
         if bin_ is None:
             raise HTTPException(status_code=404, detail="not found")
-        return bin_
+        return serialize_bin(bin_, siblings_of(session, bin_))
 
 
 def get_bin_or_404(session: Session, bin_id: int) -> Bin:
@@ -126,17 +160,17 @@ def bin_qr_svg(bin_id: int):
     return Response(content=buf.getvalue(), media_type="image/svg+xml")
 
 
-@router.post("", response_model=Bin, status_code=201)
+@router.post("", status_code=201)
 def create_bin(payload: BinCreate):
     with Session(engine) as session:
         bin_ = Bin(code=generate_code(session), **payload.model_dump())
         session.add(bin_)
         session.commit()
         session.refresh(bin_)
-        return bin_
+        return serialize_bin(bin_, siblings_of(session, bin_))
 
 
-@router.post("/batch", response_model=list[Bin])
+@router.post("/batch")
 def batch_create_bins(payload: BatchCreate):
     with Session(engine) as session:
         bins = []
@@ -147,10 +181,10 @@ def batch_create_bins(payload: BatchCreate):
         session.commit()
         for bin_ in bins:
             session.refresh(bin_)
-        return bins
+        return [serialize_bin(b, siblings_of(session, b)) for b in bins]
 
 
-@router.post("/{bin_id}/claim", response_model=Bin)
+@router.post("/{bin_id}/claim")
 def claim_bin(bin_id: int, payload: ClaimPayload):
     with Session(engine) as session:
         bin_ = session.get(Bin, bin_id)
@@ -164,10 +198,10 @@ def claim_bin(bin_id: int, payload: ClaimPayload):
         session.add(bin_)
         session.commit()
         session.refresh(bin_)
-        return bin_
+        return serialize_bin(bin_, siblings_of(session, bin_))
 
 
-@router.patch("/{bin_id}", response_model=Bin)
+@router.patch("/{bin_id}")
 def update_bin(bin_id: int, payload: BinUpdate):
     with Session(engine) as session:
         bin_ = session.get(Bin, bin_id)
@@ -178,7 +212,7 @@ def update_bin(bin_id: int, payload: BinUpdate):
         session.add(bin_)
         session.commit()
         session.refresh(bin_)
-        return bin_
+        return serialize_bin(bin_, siblings_of(session, bin_))
 
 
 @router.delete("/{bin_id}", status_code=204)
@@ -191,7 +225,7 @@ def delete_bin(bin_id: int):
         session.commit()
 
 
-@stack_router.post("/api/locations/{stack_id}/reorder", response_model=list[Bin])
+@stack_router.post("/api/locations/{stack_id}/reorder")
 def reorder_stack(stack_id: int, payload: ReorderPayload):
     with Session(engine) as session:
         for position, bin_id in enumerate(payload.ordered_bin_ids, start=1):
@@ -203,4 +237,5 @@ def reorder_stack(stack_id: int, payload: ReorderPayload):
             session.add(bin_)
         session.commit()
         bins = session.exec(select(Bin).where(Bin.location_id == stack_id)).all()
-        return sorted(bins, key=lambda b: b.stack_position or 0)
+        bins.sort(key=lambda b: b.stack_position or 0)
+        return [serialize_bin(b, bins) for b in bins]

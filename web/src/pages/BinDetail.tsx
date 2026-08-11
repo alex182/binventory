@@ -152,6 +152,11 @@ export default function BinDetail({ code }: Props) {
       <p className="address">{binAddress(locations, bin)}</p>
       <p>Code: {bin.code}</p>
       <p>Fullness: {bin.fullness}</p>
+      {bin.is_buried && (
+        <p className="badge buried">
+          {bin.bins_on_top} tote{bin.bins_on_top === 1 ? "" : "s"} on top
+        </p>
+      )}
       {bin.notes && <p>Notes: {bin.notes}</p>}
       <ItemsSection binId={bin.id} />
       <button onClick={() => navigate("/")}>Back to locations</button>

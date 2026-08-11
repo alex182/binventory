@@ -24,11 +24,11 @@ export interface Bin {
   location_note: string;
   notes: string;
   created_at: string;
+  is_buried: boolean;
+  bins_on_top: number;
 }
 
-export interface BinWithBuried extends Bin {
-  is_buried: boolean;
-}
+export type BinWithBuried = Bin;
 
 export interface BinInput {
   label: string;
