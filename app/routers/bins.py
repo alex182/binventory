@@ -51,9 +51,18 @@ class ReorderPayload(BaseModel):
     ordered_bin_ids: list[int]
 
 
-# Reorder is a location-scoped route (/api/locations/{stack_id}/reorder), not
-# a /api/bins one, so it needs its own unprefixed router even though it lives
-# in this file per the ticket's Files list.
+class MoveBinPayload(BaseModel):
+    to_location_id: int
+    to_position: Optional[int] = None
+
+
+class MoveStackPayload(BaseModel):
+    to_location_id: int
+
+
+# Reorder/move-stack are location-scoped routes (/api/locations/...), not
+# /api/bins ones, so they need their own unprefixed router even though they
+# live in this file per the tickets' Files lists.
 stack_router = APIRouter(tags=["bins"])
 
 
@@ -225,6 +234,20 @@ def delete_bin(bin_id: int):
         session.commit()
 
 
+@router.post("/{bin_id}/move")
+def move_bin(bin_id: int, payload: MoveBinPayload):
+    with Session(engine) as session:
+        bin_ = session.get(Bin, bin_id)
+        if bin_ is None:
+            raise HTTPException(status_code=404, detail="not found")
+        bin_.location_id = payload.to_location_id
+        bin_.stack_position = payload.to_position
+        session.add(bin_)
+        session.commit()
+        session.refresh(bin_)
+        return serialize_bin(bin_, siblings_of(session, bin_))
+
+
 @stack_router.post("/api/locations/{stack_id}/reorder")
 def reorder_stack(stack_id: int, payload: ReorderPayload):
     with Session(engine) as session:
@@ -239,3 +262,19 @@ def reorder_stack(stack_id: int, payload: ReorderPayload):
         bins = session.exec(select(Bin).where(Bin.location_id == stack_id)).all()
         bins.sort(key=lambda b: b.stack_position or 0)
         return [serialize_bin(b, bins) for b in bins]
+
+
+@stack_router.post("/api/locations/{stack_id}/move")
+def move_stack(stack_id: int, payload: MoveStackPayload):
+    with Session(engine) as session:
+        bins = session.exec(select(Bin).where(Bin.location_id == stack_id)).all()
+        for bin_ in bins:
+            bin_.location_id = payload.to_location_id
+            session.add(bin_)
+        session.commit()
+
+        moved = session.exec(
+            select(Bin).where(Bin.location_id == payload.to_location_id)
+        ).all()
+        moved.sort(key=lambda b: b.stack_position or 0)
+        return [serialize_bin(b, moved) for b in moved]

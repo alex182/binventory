@@ -113,6 +113,24 @@ export function claimBin(id: number, data: BinInput): Promise<Bin> {
   return request<Bin>(`/bins/${id}/claim`, { method: "POST", body: JSON.stringify(data) });
 }
 
+export function moveBin(
+  id: number,
+  toLocationId: number,
+  toPosition?: number | null,
+): Promise<Bin> {
+  return request<Bin>(`/bins/${id}/move`, {
+    method: "POST",
+    body: JSON.stringify({ to_location_id: toLocationId, to_position: toPosition ?? null }),
+  });
+}
+
+export function moveStack(stackId: number, toLocationId: number): Promise<Bin[]> {
+  return request<Bin[]>(`/locations/${stackId}/move`, {
+    method: "POST",
+    body: JSON.stringify({ to_location_id: toLocationId }),
+  });
+}
+
 export interface Item {
   id: number;
   bin_id: number;

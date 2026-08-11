@@ -10,8 +10,10 @@ import {
   listItems,
   listLocations,
   loanItem,
+  moveBin,
   returnItem,
 } from "../api";
+import MoveDialog from "../components/MoveDialog";
 import { navigate } from "../router";
 import ClaimBin from "./ClaimBin";
 
@@ -120,6 +122,7 @@ function ItemsSection({ binId }: { binId: number }) {
 export default function BinDetail({ code }: Props) {
   const [bin, setBin] = useState<Bin | null | undefined>(undefined);
   const [locations, setLocations] = useState<Location[]>([]);
+  const [showMoveDialog, setShowMoveDialog] = useState(false);
 
   useEffect(() => {
     setBin(undefined);
@@ -159,6 +162,18 @@ export default function BinDetail({ code }: Props) {
       )}
       {bin.notes && <p>Notes: {bin.notes}</p>}
       <ItemsSection binId={bin.id} />
+      <button onClick={() => setShowMoveDialog(true)}>Move</button>
+      {showMoveDialog && (
+        <MoveDialog
+          title={`Move ${bin.label || bin.code}`}
+          locations={locations}
+          onMove={async (toLocationId) => {
+            const moved = await moveBin(bin.id, toLocationId);
+            setBin(moved);
+          }}
+          onClose={() => setShowMoveDialog(false)}
+        />
+      )}
       <button onClick={() => navigate("/")}>Back to locations</button>
     </div>
   );
