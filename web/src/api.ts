@@ -26,6 +26,10 @@ export interface Bin {
   created_at: string;
 }
 
+export interface BinWithBuried extends Bin {
+  is_buried: boolean;
+}
+
 export interface BinInput {
   label: string;
   location_id: number | null;
@@ -69,6 +73,10 @@ export function listBins(params?: {
 
 export function getBin(id: number): Promise<Bin> {
   return request<Bin>(`/bins/${id}`);
+}
+
+export function getLocationBins(locationId: number): Promise<BinWithBuried[]> {
+  return request<BinWithBuried[]>(`/locations/${locationId}/bins`);
 }
 
 export function createBin(data: BinInput): Promise<Bin> {

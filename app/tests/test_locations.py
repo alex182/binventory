@@ -57,3 +57,31 @@ def test_tree_endpoint_nests_children():
     tree = client.get("/api/locations/tree").json()
     garage_node = next(node for node in tree if node["name"] == "Garage")
     assert any(child["name"] == "Shelf C" for child in garage_node["children"])
+
+
+def test_location_bins_ordered_top_to_bottom_with_is_buried():
+    garage_id = get_garage_id()
+    zone_id = client.post(
+        "/api/locations",
+        json={"name": "Reverse Zone", "kind": "zone", "parent_id": garage_id},
+    ).json()["id"]
+    stack_id = client.post(
+        "/api/locations",
+        json={"name": "Reverse Stack", "kind": "stack", "parent_id": zone_id},
+    ).json()["id"]
+
+    bottom = client.post(
+        "/api/bins",
+        json={"label": "Bottom", "location_id": stack_id, "stack_position": 1},
+    ).json()
+    top = client.post(
+        "/api/bins",
+        json={"label": "Top", "location_id": stack_id, "stack_position": 2},
+    ).json()
+
+    resp = client.get(f"/api/locations/{stack_id}/bins")
+    assert resp.status_code == 200
+    bins = resp.json()
+    assert [b["id"] for b in bins] == [top["id"], bottom["id"]]
+    assert bins[0]["is_buried"] is False
+    assert bins[1]["is_buried"] is True

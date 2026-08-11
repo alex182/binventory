@@ -5,7 +5,7 @@ from pydantic import BaseModel
 from sqlmodel import Session, select
 
 from db import engine
-from models import Location
+from models import Bin, Location
 
 router = APIRouter(prefix="/api/locations", tags=["locations"])
 
@@ -86,6 +86,35 @@ def location_tree():
 
     roots = [loc for loc in locations if loc.parent_id is None or loc.parent_id not in ids]
     return [build(loc) for loc in roots]
+
+
+@router.get("/{location_id}/bins")
+def location_bins(location_id: int):
+    with Session(engine) as session:
+        loc = session.get(Location, location_id)
+        if loc is None:
+            raise HTTPException(status_code=404, detail="not found")
+        bins = session.exec(
+            select(Bin).where(Bin.location_id == location_id, Bin.status != "blank")
+        ).all()
+
+    positioned = sorted(
+        (b for b in bins if b.stack_position is not None),
+        key=lambda b: -b.stack_position,
+    )
+    unpositioned = [b for b in bins if b.stack_position is None]
+
+    def is_buried(b: Bin) -> bool:
+        if b.stack_position is None:
+            return False
+        return any(other.stack_position > b.stack_position for other in positioned)
+
+    result = []
+    for b in positioned + unpositioned:
+        data = b.model_dump()
+        data["is_buried"] = is_buried(b)
+        result.append(data)
+    return result
 
 
 @router.post("", response_model=Location, status_code=201)
