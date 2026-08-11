@@ -11,7 +11,7 @@ from sqlmodel import Session, select
 
 from config import BASE_URL
 from db import engine
-from models import Bin, Location, MoveLog
+from models import Bin, Item, Location, MoveLog
 
 router = APIRouter(prefix="/api/bins", tags=["bins"])
 
@@ -121,7 +121,11 @@ def log_move(
 
 
 @router.get("")
-def list_bins(location_id: Optional[int] = None, include_blank: bool = False):
+def list_bins(
+    location_id: Optional[int] = None,
+    include_blank: bool = False,
+    empty: Optional[bool] = None,
+):
     with Session(engine) as session:
         all_bins = session.exec(select(Bin)).all()
 
@@ -134,6 +138,11 @@ def list_bins(location_id: Optional[int] = None, include_blank: bool = False):
             query_bins = [b for b in query_bins if b.location_id == location_id]
         if not include_blank:
             query_bins = [b for b in query_bins if b.status != "blank"]
+        if empty is not None:
+            bin_ids_with_items = {i.bin_id for i in session.exec(select(Item)).all()}
+            query_bins = [
+                b for b in query_bins if (b.id not in bin_ids_with_items) == empty
+            ]
 
         return [serialize_bin(b, by_location.get(b.location_id, [])) for b in query_bins]
 

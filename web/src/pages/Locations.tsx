@@ -47,6 +47,7 @@ export default function Locations() {
   const [showForm, setShowForm] = useState(false);
   const [refreshToken, setRefreshToken] = useState(0);
   const [view, setView] = useState<"bins" | "grid">("bins");
+  const [emptyOnly, setEmptyOnly] = useState(false);
 
   const selectedLocation = locations.find((l) => l.id === selectedId) ?? null;
   const isSite = selectedLocation?.kind === "site";
@@ -104,10 +105,19 @@ export default function Locations() {
                 >
                   + New bin here
                 </button>
+                <label className="empty-filter">
+                  <input
+                    type="checkbox"
+                    checked={emptyOnly}
+                    onChange={(e) => setEmptyOnly(e.target.checked)}
+                  />
+                  Show only empty bins
+                </label>
                 <LocationDetail
                   locationId={selectedId}
                   locations={locations}
                   refreshToken={refreshToken}
+                  emptyOnly={emptyOnly}
                   onSelectBin={(bin: BinWithBuried) => {
                     setEditingBin(bin);
                     setShowForm(true);

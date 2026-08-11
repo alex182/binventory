@@ -63,10 +63,12 @@ export function getLocationTree(): Promise<LocationTreeNode[]> {
 export function listBins(params?: {
   location_id?: number;
   include_blank?: boolean;
+  empty?: boolean;
 }): Promise<Bin[]> {
   const qs = new URLSearchParams();
   if (params?.location_id != null) qs.set("location_id", String(params.location_id));
   if (params?.include_blank) qs.set("include_blank", "true");
+  if (params?.empty != null) qs.set("empty", String(params.empty));
   const suffix = qs.toString() ? `?${qs.toString()}` : "";
   return request<Bin[]>(`/bins${suffix}`);
 }

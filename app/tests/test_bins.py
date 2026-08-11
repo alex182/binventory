@@ -52,3 +52,17 @@ def test_get_bin_by_code():
     assert resp.json()["status"] == "active"
 
     assert client.get("/api/bins/by-code/zzzznope").status_code == 404
+
+
+def test_empty_filter():
+    empty_bin = client.post("/api/bins", json={"label": "Empty bin"}).json()
+    full_bin = client.post("/api/bins", json={"label": "Full bin"}).json()
+    client.post(f"/api/bins/{full_bin['id']}/items", json={"name": "widget"})
+
+    empty_ids = {b["id"] for b in client.get("/api/bins?empty=true").json()}
+    assert empty_bin["id"] in empty_ids
+    assert full_bin["id"] not in empty_ids
+
+    nonempty_ids = {b["id"] for b in client.get("/api/bins?empty=false").json()}
+    assert full_bin["id"] in nonempty_ids
+    assert empty_bin["id"] not in nonempty_ids

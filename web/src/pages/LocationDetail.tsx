@@ -1,5 +1,13 @@
 import { useEffect, useState } from "react";
-import { BinWithBuried, Fullness, Location, binAddress, getLocationBins, moveStack } from "../api";
+import {
+  BinWithBuried,
+  Fullness,
+  Location,
+  binAddress,
+  getLocationBins,
+  listBins,
+  moveStack,
+} from "../api";
 import MoveDialog from "../components/MoveDialog";
 
 const FULLNESS_LABEL: Record<Fullness, string> = {
@@ -13,20 +21,31 @@ interface Props {
   locations: Location[];
   onSelectBin: (bin: BinWithBuried) => void;
   refreshToken: number;
+  emptyOnly: boolean;
 }
 
-export default function LocationDetail({ locationId, locations, onSelectBin, refreshToken }: Props) {
+export default function LocationDetail({
+  locationId,
+  locations,
+  onSelectBin,
+  refreshToken,
+  emptyOnly,
+}: Props) {
   const [bins, setBins] = useState<BinWithBuried[]>([]);
   const [showMoveStack, setShowMoveStack] = useState(false);
 
   function refresh() {
-    getLocationBins(locationId).then(setBins);
+    if (emptyOnly) {
+      listBins({ location_id: locationId, empty: true }).then(setBins);
+    } else {
+      getLocationBins(locationId).then(setBins);
+    }
   }
 
   useEffect(() => {
     refresh();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [locationId, refreshToken]);
+  }, [locationId, refreshToken, emptyOnly]);
 
   const isStack = locations.find((l) => l.id === locationId)?.kind === "stack";
 
@@ -47,7 +66,7 @@ export default function LocationDetail({ locationId, locations, onSelectBin, ref
         />
       )}
       {bins.length === 0 ? (
-        <p>No bins here yet.</p>
+        <p>{emptyOnly ? "No empty bins here." : "No bins here yet."}</p>
       ) : (
         <ul className="bin-list">
           {bins.map((bin) => (
