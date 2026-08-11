@@ -5,6 +5,7 @@ from fastapi.responses import FileResponse
 from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
 from db import init_db
+from routers import locations
 
 app = FastAPI()
 app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
@@ -15,6 +16,9 @@ init_db()
 @app.get("/api/health")
 def health():
     return {"status": "ok"}
+
+
+app.include_router(locations.router)
 
 
 STATIC_DIR = Path(__file__).parent / "static"
