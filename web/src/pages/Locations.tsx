@@ -67,6 +67,12 @@ export default function Locations() {
     setView("bins");
   }
 
+  async function closeFormAndRefresh() {
+    setShowForm(false);
+    await refreshTree();
+    setRefreshToken((t) => t + 1);
+  }
+
   return (
     <div className="locations-page">
       <aside>
@@ -133,11 +139,8 @@ export default function Locations() {
             locations={locations}
             defaultLocationId={selectedId}
             onCancel={() => setShowForm(false)}
-            onSaved={async () => {
-              setShowForm(false);
-              await refreshTree();
-              setRefreshToken((t) => t + 1);
-            }}
+            onSaved={closeFormAndRefresh}
+            onDeleted={closeFormAndRefresh}
           />
         )}
       </main>

@@ -1,5 +1,5 @@
 import { FormEvent, useState } from "react";
-import { Bin, BinInput, Fullness, Location, createBin, updateBin } from "../api";
+import { Bin, BinInput, Fullness, Location, createBin, deleteBin, updateBin } from "../api";
 import PhotoGrid from "../components/PhotoGrid";
 
 const FULLNESS_OPTIONS: { value: Fullness; label: string }[] = [
@@ -33,9 +33,17 @@ interface Props {
   defaultLocationId: number | null;
   onCancel: () => void;
   onSaved: (bin: Bin) => void;
+  onDeleted: () => void;
 }
 
-export default function BinForm({ bin, locations, defaultLocationId, onCancel, onSaved }: Props) {
+export default function BinForm({
+  bin,
+  locations,
+  defaultLocationId,
+  onCancel,
+  onSaved,
+  onDeleted,
+}: Props) {
   const [label, setLabel] = useState(bin?.label ?? "");
   const [locationId, setLocationId] = useState<number | "">(
     bin?.location_id ?? defaultLocationId ?? "",
@@ -48,6 +56,19 @@ export default function BinForm({ bin, locations, defaultLocationId, onCancel, o
   const [notes, setNotes] = useState(bin?.notes ?? "");
   const [error, setError] = useState<string | null>(null);
   const [savedBin, setSavedBin] = useState<Bin | null>(null);
+
+  async function handleDelete() {
+    if (!bin) return;
+    if (!window.confirm(`Delete "${bin.label || bin.code}"? This can't be undone.`)) {
+      return;
+    }
+    try {
+      await deleteBin(bin.id);
+      onDeleted();
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -146,6 +167,11 @@ export default function BinForm({ bin, locations, defaultLocationId, onCancel, o
         <button type="button" onClick={onCancel}>
           Cancel
         </button>
+        {bin && (
+          <button type="button" className="delete-bin" onClick={handleDelete}>
+            Delete bin
+          </button>
+        )}
       </div>
     </form>
   );
