@@ -112,6 +112,18 @@ h1 {
   margin: 0 0 12px;
 }
 
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.page-header h1 {
+  margin: 0;
+}
+
 h2 {
   font-size: 1.1rem;
 }
@@ -123,9 +135,15 @@ h3 {
 
 nav {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 8px;
   margin-bottom: 12px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+nav button {
+  flex: 0 0 auto;
 }
 
 .theme-toggle {
@@ -172,6 +190,15 @@ textarea {
 
 textarea {
   min-height: 72px;
+}
+
+input[type="checkbox"],
+input[type="radio"] {
+  width: 20px;
+  height: 20px;
+  min-height: 20px;
+  flex: 0 0 auto;
+  padding: 0;
 }
 
 label {
@@ -247,6 +274,12 @@ ul {
 .address {
   color: var(--muted);
   font-size: 0.9rem;
+}
+
+.contents-preview {
+  width: 100%;
+  color: var(--muted-light);
+  font-size: 0.85rem;
 }
 
 .hint {

@@ -1,47 +1,14 @@
 import { useEffect, useState } from "react";
-import { Bin, Location, LocationTreeNode, getLocationTree, listLocations } from "../api";
+import { Bin, Location, listLocations } from "../api";
 import { navigate } from "../router";
 import BinForm from "./BinForm";
 import GridView from "./GridView";
 import LocationDetail from "./LocationDetail";
 
-function nodeLabel(node: Location): string {
-  if (node.kind === "stack" && node.grid_row != null && node.grid_col != null) {
-    return `R${node.grid_row}C${node.grid_col}`;
-  }
-  return node.name;
-}
-
-function TreeNode({
-  node,
-  selectedId,
-  onSelect,
-}: {
-  node: LocationTreeNode;
-  selectedId: number | null;
-  onSelect: (id: number) => void;
-}) {
-  return (
-    <li>
-      <button
-        className={node.id === selectedId ? "selected" : ""}
-        onClick={() => onSelect(node.id)}
-      >
-        {nodeLabel(node)}
-      </button>
-      {node.children.length > 0 && (
-        <ul>
-          {node.children.map((child) => (
-            <TreeNode key={child.id} node={child} selectedId={selectedId} onSelect={onSelect} />
-          ))}
-        </ul>
-      )}
-    </li>
-  );
-}
-
 export default function Locations() {
-  const [tree, setTree] = useState<LocationTreeNode[]>([]);
+  // Sites only — zones, stacks, and slots are reached by selecting a site
+  // and browsing its (recursive) bin list or Grid view, not via a tree.
+  const [sites, setSites] = useState<Location[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [showForm, setShowForm] = useState(false);
@@ -53,8 +20,8 @@ export default function Locations() {
   const isSite = selectedLocation?.kind === "site";
 
   async function refreshTree() {
-    const [t, l] = await Promise.all([getLocationTree(), listLocations()]);
-    setTree(t);
+    const l = await listLocations();
+    setSites(l.filter((loc) => loc.kind === "site"));
     setLocations(l);
   }
 
@@ -76,8 +43,15 @@ export default function Locations() {
       <aside>
         <h2>Locations</h2>
         <ul className="tree">
-          {tree.map((node) => (
-            <TreeNode key={node.id} node={node} selectedId={selectedId} onSelect={selectLocation} />
+          {sites.map((site) => (
+            <li key={site.id}>
+              <button
+                className={site.id === selectedId ? "selected" : ""}
+                onClick={() => selectLocation(site.id)}
+              >
+                {site.name}
+              </button>
+            </li>
           ))}
         </ul>
       </aside>
@@ -97,8 +71,12 @@ export default function Locations() {
                 </button>
               </div>
             )}
-            {view === "grid" && isSite ? (
-              <GridView siteId={selectedId} onSelectStack={selectLocation} onGridChanged={refreshTree} />
+            {view === "grid" && selectedLocation && selectedLocation.kind === "site" ? (
+              <GridView
+                site={selectedLocation}
+                onSelectStack={selectLocation}
+                onGridChanged={refreshTree}
+              />
             ) : (
               <>
                 <button onClick={() => setShowForm(true)}>+ New bin here</button>

@@ -85,11 +85,12 @@ def bins_on_top_count(bin_: Bin, siblings: list[Bin]) -> int:
     )
 
 
-def serialize_bin(bin_: Bin, siblings: list[Bin]) -> dict:
+def serialize_bin(bin_: Bin, siblings: list[Bin], item_names: list[str]) -> dict:
     data = bin_.model_dump()
     on_top = bins_on_top_count(bin_, siblings)
     data["bins_on_top"] = on_top
     data["is_buried"] = on_top > 0
+    data["item_names"] = item_names
     return data
 
 
@@ -97,6 +98,20 @@ def siblings_of(session: Session, bin_: Bin) -> list[Bin]:
     if bin_.location_id is None:
         return []
     return session.exec(select(Bin).where(Bin.location_id == bin_.location_id)).all()
+
+
+def item_names_by_bin(session: Session, bin_ids: Optional[set[int]] = None) -> dict[int, list[str]]:
+    query = select(Item)
+    if bin_ids is not None:
+        query = query.where(Item.bin_id.in_(bin_ids))
+    result: dict[int, list[str]] = {}
+    for item in session.exec(query).all():
+        result.setdefault(item.bin_id, []).append(item.name)
+    return result
+
+
+def item_names_for(session: Session, bin_id: int) -> list[str]:
+    return item_names_by_bin(session, {bin_id}).get(bin_id, [])
 
 
 def log_move(
@@ -144,14 +159,19 @@ def list_bins(
                 b for b in query_bins if (b.id not in bin_ids_with_items) == empty
             ]
 
-        return [serialize_bin(b, by_location.get(b.location_id, [])) for b in query_bins]
+        items = item_names_by_bin(session, {b.id for b in query_bins})
+        return [
+            serialize_bin(b, by_location.get(b.location_id, []), items.get(b.id, []))
+            for b in query_bins
+        ]
 
 
 @router.get("/blank")
 def list_blank_bins():
     with Session(engine) as session:
         bins = session.exec(select(Bin).where(Bin.status == "blank")).all()
-        return [serialize_bin(b, siblings_of(session, b)) for b in bins]
+        items = item_names_by_bin(session, {b.id for b in bins})
+        return [serialize_bin(b, siblings_of(session, b), items.get(b.id, [])) for b in bins]
 
 
 @router.get("/{bin_id}")
@@ -160,7 +180,7 @@ def get_bin(bin_id: int):
         bin_ = session.get(Bin, bin_id)
         if bin_ is None:
             raise HTTPException(status_code=404, detail="not found")
-        return serialize_bin(bin_, siblings_of(session, bin_))
+        return serialize_bin(bin_, siblings_of(session, bin_), item_names_for(session, bin_id))
 
 
 @router.get("/{bin_id}/history")
@@ -201,7 +221,7 @@ def get_bin_by_code(code: str):
         bin_ = session.exec(select(Bin).where(Bin.code == code)).first()
         if bin_ is None:
             raise HTTPException(status_code=404, detail="not found")
-        return serialize_bin(bin_, siblings_of(session, bin_))
+        return serialize_bin(bin_, siblings_of(session, bin_), item_names_for(session, bin_.id))
 
 
 def get_bin_or_404(session: Session, bin_id: int) -> Bin:
@@ -238,7 +258,7 @@ def create_bin(payload: BinCreate):
         session.add(bin_)
         session.commit()
         session.refresh(bin_)
-        return serialize_bin(bin_, siblings_of(session, bin_))
+        return serialize_bin(bin_, siblings_of(session, bin_), [])
 
 
 @router.post("/batch")
@@ -252,7 +272,7 @@ def batch_create_bins(payload: BatchCreate):
         session.commit()
         for bin_ in bins:
             session.refresh(bin_)
-        return [serialize_bin(b, siblings_of(session, b)) for b in bins]
+        return [serialize_bin(b, siblings_of(session, b), []) for b in bins]
 
 
 @router.post("/{bin_id}/claim")
@@ -269,7 +289,7 @@ def claim_bin(bin_id: int, payload: ClaimPayload):
         session.add(bin_)
         session.commit()
         session.refresh(bin_)
-        return serialize_bin(bin_, siblings_of(session, bin_))
+        return serialize_bin(bin_, siblings_of(session, bin_), item_names_for(session, bin_id))
 
 
 @router.patch("/{bin_id}")
@@ -283,7 +303,7 @@ def update_bin(bin_id: int, payload: BinUpdate):
         session.add(bin_)
         session.commit()
         session.refresh(bin_)
-        return serialize_bin(bin_, siblings_of(session, bin_))
+        return serialize_bin(bin_, siblings_of(session, bin_), item_names_for(session, bin_id))
 
 
 @router.delete("/{bin_id}", status_code=204)
@@ -311,7 +331,7 @@ def move_bin(bin_id: int, payload: MoveBinPayload):
         )
         session.commit()
         session.refresh(bin_)
-        return serialize_bin(bin_, siblings_of(session, bin_))
+        return serialize_bin(bin_, siblings_of(session, bin_), item_names_for(session, bin_id))
 
 
 @stack_router.post("/api/locations/{stack_id}/reorder")
@@ -329,7 +349,8 @@ def reorder_stack(stack_id: int, payload: ReorderPayload):
         session.commit()
         bins = session.exec(select(Bin).where(Bin.location_id == stack_id)).all()
         bins.sort(key=lambda b: b.stack_position or 0)
-        return [serialize_bin(b, bins) for b in bins]
+        items = item_names_by_bin(session, {b.id for b in bins})
+        return [serialize_bin(b, bins, items.get(b.id, [])) for b in bins]
 
 
 @stack_router.post("/api/locations/{stack_id}/move")
@@ -347,4 +368,5 @@ def move_stack(stack_id: int, payload: MoveStackPayload):
             select(Bin).where(Bin.location_id == payload.to_location_id)
         ).all()
         moved.sort(key=lambda b: b.stack_position or 0)
-        return [serialize_bin(b, moved) for b in moved]
+        items = item_names_by_bin(session, {b.id for b in moved})
+        return [serialize_bin(b, moved, items.get(b.id, [])) for b in moved]

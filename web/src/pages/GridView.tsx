@@ -1,13 +1,14 @@
 import { FormEvent, useEffect, useState } from "react";
-import { Grid, createGrid, getGrid } from "../api";
+import { GRID_NUMBER_ORDER_OPTIONS, Grid, GridNumberOrder, Location, createGrid, getGrid, updateLocation } from "../api";
 
 interface Props {
-  siteId: number;
+  site: Location;
   onSelectStack: (stackId: number) => void;
   onGridChanged: () => void;
 }
 
-export default function GridView({ siteId, onSelectStack, onGridChanged }: Props) {
+export default function GridView({ site, onSelectStack, onGridChanged }: Props) {
+  const siteId = site.id;
   const [grid, setGrid] = useState<Grid | null>(null);
   const [rows, setRows] = useState("3");
   const [cols, setCols] = useState("3");
@@ -28,12 +29,30 @@ export default function GridView({ siteId, onSelectStack, onGridChanged }: Props
     onGridChanged();
   }
 
+  async function handleOrderChange(value: GridNumberOrder) {
+    await updateLocation(siteId, { grid_number_order: value });
+    onGridChanged();
+  }
+
   if (grid == null) return <p>Loading…</p>;
 
   const cellByPos = new Map(grid.cells.map((c) => [`${c.grid_row}-${c.grid_col}`, c]));
 
   return (
     <div className="grid-view">
+      <label>
+        Stack numbering direction
+        <select
+          value={site.grid_number_order ?? "front_to_back"}
+          onChange={(e) => handleOrderChange(e.target.value as GridNumberOrder)}
+        >
+          {GRID_NUMBER_ORDER_OPTIONS.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
+      </label>
       <form onSubmit={handleGenerate} className="grid-generate">
         <label>
           Rows

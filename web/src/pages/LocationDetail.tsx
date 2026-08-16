@@ -1,13 +1,5 @@
 import { useEffect, useState } from "react";
-import {
-  BinWithBuried,
-  Fullness,
-  Location,
-  binAddress,
-  getLocationBins,
-  listBins,
-  moveStack,
-} from "../api";
+import { BinWithBuried, Fullness, Location, binAddress, getLocationBins, moveStack } from "../api";
 import MoveDialog from "../components/MoveDialog";
 
 const FULLNESS_LABEL: Record<Fullness, string> = {
@@ -15,6 +7,14 @@ const FULLNESS_LABEL: Record<Fullness, string> = {
   room: "Has room",
   full: "Full",
 };
+
+const CONTENTS_PREVIEW_MAX = 4;
+
+function summarizeItems(names: string[]): string {
+  if (names.length <= CONTENTS_PREVIEW_MAX) return names.join(", ");
+  const shown = names.slice(0, CONTENTS_PREVIEW_MAX).join(", ");
+  return `${shown} +${names.length - CONTENTS_PREVIEW_MAX} more`;
+}
 
 interface Props {
   locationId: number;
@@ -35,11 +35,7 @@ export default function LocationDetail({
   const [showMoveStack, setShowMoveStack] = useState(false);
 
   function refresh() {
-    if (emptyOnly) {
-      listBins({ location_id: locationId, empty: true }).then(setBins);
-    } else {
-      getLocationBins(locationId).then(setBins);
-    }
+    getLocationBins(locationId, emptyOnly ? { empty: true } : undefined).then(setBins);
   }
 
   useEffect(() => {
@@ -81,6 +77,9 @@ export default function LocationDetail({
                 </span>
               )}
               <span className="address">{binAddress(locations, bin)}</span>
+              {bin.item_names.length > 0 && (
+                <span className="contents-preview">{summarizeItems(bin.item_names)}</span>
+              )}
             </li>
           ))}
         </ul>

@@ -17,6 +17,10 @@
   color: #000000;
 }
 
+.sheet.avery-5160:last-of-type {
+  page-break-after: auto;
+}
+
 .sheet.avery-5160 .label {
   box-sizing: border-box;
   overflow: hidden;
@@ -40,6 +44,46 @@
 
 .label-name {
   font-weight: bold;
+}
+
+.bin-select-group-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0.5em 0;
+}
+
+.group-toggle {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 6px 8px;
+  border: none;
+  background: none;
+  font-size: 0.95em;
+  font-weight: bold;
+  text-align: left;
+  cursor: pointer;
+}
+
+.group-toggle-icon {
+  display: inline-block;
+  width: 1em;
+  flex-shrink: 0;
+}
+
+.bin-select-table {
+  border-collapse: collapse;
+  margin: 0 0 0.5em;
+  width: 100%;
+}
+
+.bin-select-table th,
+.bin-select-table td {
+  text-align: left;
+  padding: 2px 8px 2px 0;
 }
 
 @media screen {

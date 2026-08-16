@@ -1,5 +1,5 @@
 import { FormEvent, useState } from "react";
-import { Bin, BinInput, Fullness, Location, claimBin } from "../api";
+import { Bin, BinInput, Fullness, Location, claimBin, resolveOrCreateBinLocation } from "../api";
 
 const FULLNESS_OPTIONS: { value: Fullness; label: string }[] = [
   { value: "empty", label: "Empty" },
@@ -7,15 +7,19 @@ const FULLNESS_OPTIONS: { value: Fullness; label: string }[] = [
   { value: "full", label: "Full" },
 ];
 
+const PICKABLE_KINDS: Location["kind"][] = ["site", "zone"];
+
 interface Props {
   bin: Bin;
   locations: Location[];
   onClaimed: (bin: Bin) => void;
+  onLocationsChanged?: (locations: Location[]) => void;
 }
 
-export default function ClaimBin({ bin, locations, onClaimed }: Props) {
+export default function ClaimBin({ bin, locations, onClaimed, onLocationsChanged }: Props) {
   const [label, setLabel] = useState("");
   const [locationId, setLocationId] = useState<number | "">("");
+  const [stackNumber, setStackNumber] = useState("");
   const [stackPosition, setStackPosition] = useState("");
   const [fullness, setFullness] = useState<Fullness>("room");
   const [locationNote, setLocationNote] = useState("");
@@ -25,15 +29,22 @@ export default function ClaimBin({ bin, locations, onClaimed }: Props) {
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
-    const payload: BinInput = {
-      label,
-      location_id: locationId === "" ? null : locationId,
-      stack_position: stackPosition === "" ? null : Number(stackPosition),
-      fullness,
-      location_note: locationNote,
-      notes,
-    };
     try {
+      const { locationId: resolvedLocationId, locations: updatedLocations } =
+        await resolveOrCreateBinLocation(
+          locations,
+          locationId === "" ? null : locationId,
+          stackNumber,
+        );
+      onLocationsChanged?.(updatedLocations);
+      const payload: BinInput = {
+        label,
+        location_id: resolvedLocationId,
+        stack_position: stackPosition === "" ? null : Number(stackPosition),
+        fullness,
+        location_note: locationNote,
+        notes,
+      };
       const claimed = await claimBin(bin.id, payload);
       onClaimed(claimed);
     } catch (err) {
@@ -55,15 +66,26 @@ export default function ClaimBin({ bin, locations, onClaimed }: Props) {
           onChange={(e) => setLocationId(e.target.value === "" ? "" : Number(e.target.value))}
         >
           <option value="">— none —</option>
-          {locations.map((loc) => (
-            <option key={loc.id} value={loc.id}>
-              {loc.name}
-            </option>
-          ))}
+          {locations
+            .filter((loc) => PICKABLE_KINDS.includes(loc.kind))
+            .map((loc) => (
+              <option key={loc.id} value={loc.id}>
+                {loc.name}
+              </option>
+            ))}
         </select>
       </label>
       <label>
-        Stack position
+        Stack Number
+        <input
+          type="number"
+          min={1}
+          value={stackNumber}
+          onChange={(e) => setStackNumber(e.target.value)}
+        />
+      </label>
+      <label>
+        Position In Stack
         <input
           type="number"
           min={1}

@@ -7,6 +7,8 @@ import {
   Location,
   createBin,
   locationOptionLabel,
+  resolveOrCreateBinLocation,
+  splitBinLocation,
 } from "../api";
 
 interface Props {
@@ -16,9 +18,13 @@ interface Props {
   onSaved: (bin: Bin) => void;
 }
 
+const PICKABLE_KINDS: Location["kind"][] = ["site", "zone"];
+
 export default function BinForm({ locations, defaultLocationId, onCancel, onSaved }: Props) {
+  const defaultSplit = splitBinLocation(locations, defaultLocationId);
   const [label, setLabel] = useState("");
-  const [locationId, setLocationId] = useState<number | "">(defaultLocationId ?? "");
+  const [locationId, setLocationId] = useState<number | "">(defaultSplit.parentId ?? "");
+  const [stackNumber, setStackNumber] = useState(defaultSplit.stackNumber);
   const [stackPosition, setStackPosition] = useState("");
   const [fullness, setFullness] = useState<Fullness>("room");
   const [locationNote, setLocationNote] = useState("");
@@ -28,15 +34,20 @@ export default function BinForm({ locations, defaultLocationId, onCancel, onSave
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
-    const payload: BinInput = {
-      label,
-      location_id: locationId === "" ? null : locationId,
-      stack_position: stackPosition === "" ? null : Number(stackPosition),
-      fullness,
-      location_note: locationNote,
-      notes,
-    };
     try {
+      const { locationId: resolvedLocationId } = await resolveOrCreateBinLocation(
+        locations,
+        locationId === "" ? null : locationId,
+        stackNumber,
+      );
+      const payload: BinInput = {
+        label,
+        location_id: resolvedLocationId,
+        stack_position: stackPosition === "" ? null : Number(stackPosition),
+        fullness,
+        location_note: locationNote,
+        notes,
+      };
       const result = await createBin(payload);
       onSaved(result);
     } catch (err) {
@@ -58,15 +69,26 @@ export default function BinForm({ locations, defaultLocationId, onCancel, onSave
           onChange={(e) => setLocationId(e.target.value === "" ? "" : Number(e.target.value))}
         >
           <option value="">— none —</option>
-          {locations.map((loc) => (
-            <option key={loc.id} value={loc.id}>
-              {locationOptionLabel(locations, loc)}
-            </option>
-          ))}
+          {locations
+            .filter((loc) => PICKABLE_KINDS.includes(loc.kind))
+            .map((loc) => (
+              <option key={loc.id} value={loc.id}>
+                {locationOptionLabel(locations, loc)}
+              </option>
+            ))}
         </select>
       </label>
       <label>
-        Stack position
+        Stack Number
+        <input
+          type="number"
+          min={1}
+          value={stackNumber}
+          onChange={(e) => setStackNumber(e.target.value)}
+        />
+      </label>
+      <label>
+        Position In Stack
         <input
           type="number"
           min={1}

@@ -27,13 +27,17 @@ export default function App() {
 
   return (
     <div>
-      <h1 className="no-print">Binventory</h1>
+      {path !== "/print" && (
+        <div className="page-header no-print">
+          <h1>Binventory</h1>
+          <ThemeToggle />
+        </div>
+      )}
       <nav className="no-print">
         <button onClick={() => navigate("/")}>Locations</button>
         <button onClick={() => navigate("/scan")}>Scan</button>
         <button onClick={() => navigate("/print")}>Print labels</button>
         <button onClick={() => navigate("/loans")}>Loans</button>
-        <ThemeToggle />
       </nav>
       <div className="no-print">
         <SearchBar />

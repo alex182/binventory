@@ -65,3 +65,60 @@ accept it once ("Advanced" → "Accept the Risk and Continue" in Firefox).
 The cert/key land in `tls/` and are gitignored; only `tls/nginx.conf` and
 the generator script are tracked. This is dev-only scaffolding — production
 TLS is the external nginx described above, not this proxy.
+
+## Deploying to a remote machine
+
+The repo lives in a **private** GitHub repo, so the target host needs read
+access to clone/pull it — either an SSH deploy key added to the repo, or a
+personal access token (PAT, `repo` scope) used over HTTPS. The container's
+data (`db.sqlite`, `photos/`) lives in the named Docker volume, not in the
+repo, so pulling new code never touches it.
+
+**First deploy:**
+
+```
+ssh user@target-host
+git clone git@github.com:alex182/binventory.git ~/docker/binventory
+# or, with a PAT instead of an SSH key:
+#   git clone https://<token>@github.com/alex182/binventory.git ~/docker/binventory
+cd ~/docker/binventory
+docker compose up -d --build
+```
+
+**Redeploying after pushing changes:**
+
+```
+ssh user@target-host
+cd ~/docker/binventory
+git pull
+docker compose up -d --build
+```
+
+Set `BASE_URL` on the target (e.g. via a `.env` file or the shell before
+`docker compose up`) to the public URL your external nginx exposes — see
+"Reverse proxy (nginx)" above. The `tls-proxy` profile is dev-only and
+shouldn't be started on the target; production TLS is handled by the
+external nginx in front of the container.
+
+**Without git on the target:** ship a tarball instead —
+
+```
+# on this machine
+tar czf binventory.tar.gz \
+  --exclude .git \
+  --exclude node_modules \
+  --exclude dist \
+  --exclude app/static \
+  --exclude __pycache__ \
+  --exclude .pytest_cache \
+  --exclude .ruff_cache \
+  --exclude docker-compose.override.yml \
+  -C ~ binventory
+scp binventory.tar.gz user@target-host:~/docker/
+
+# on the target machine
+cd ~/docker
+tar xzf binventory.tar.gz
+cd binventory
+docker compose up -d --build
+```

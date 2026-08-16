@@ -15,6 +15,9 @@ class Location(SQLModel, table=True):
     parent_id: Optional[int] = Field(default=None, foreign_key="location.id")
     grid_row: Optional[int] = None
     grid_col: Optional[int] = None
+    # Only meaningful on a grid site: how its stacks are numbered 1..N for
+    # the "Stack Number" bin field. None means "front_to_back".
+    grid_number_order: Optional[str] = None
 
 
 class Bin(SQLModel, table=True):

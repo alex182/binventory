@@ -13,6 +13,8 @@ import {
   listLocations,
   locationOptionLabel,
   moveBin,
+  resolveOrCreateBinLocation,
+  splitBinLocation,
   updateBin,
 } from "../api";
 import ItemsSection from "../components/ItemsSection";
@@ -24,6 +26,8 @@ import ClaimBin from "./ClaimBin";
 interface Props {
   code: string;
 }
+
+const PICKABLE_KINDS: Location["kind"][] = ["site", "zone"];
 
 function HistorySection({ binId, refreshToken }: { binId: number; refreshToken: number }) {
   const [history, setHistory] = useState<MoveLogEntry[]>([]);
@@ -59,6 +63,7 @@ export default function BinDetail({ code }: Props) {
 
   const [label, setLabel] = useState("");
   const [locationId, setLocationId] = useState<number | "">("");
+  const [stackNumber, setStackNumber] = useState("");
   const [stackPosition, setStackPosition] = useState("");
   const [locationNote, setLocationNote] = useState("");
   const [fullness, setFullness] = useState<Fullness>("room");
@@ -72,8 +77,10 @@ export default function BinDetail({ code }: Props) {
       setBin(b);
       setLocations(locs);
       if (b) {
+        const split = splitBinLocation(locs, b.location_id);
         setLabel(b.label);
-        setLocationId(b.location_id ?? "");
+        setLocationId(split.parentId ?? "");
+        setStackNumber(split.stackNumber);
         setStackPosition(b.stack_position != null ? String(b.stack_position) : "");
         setLocationNote(b.location_note);
         setFullness(b.fullness);
@@ -96,7 +103,14 @@ export default function BinDetail({ code }: Props) {
   }
 
   if (bin.status === "blank") {
-    return <ClaimBin bin={bin} locations={locations} onClaimed={setBin} />;
+    return (
+      <ClaimBin
+        bin={bin}
+        locations={locations}
+        onClaimed={setBin}
+        onLocationsChanged={setLocations}
+      />
+    );
   }
 
   async function handleSave(e: FormEvent) {
@@ -104,15 +118,22 @@ export default function BinDetail({ code }: Props) {
     if (!bin) return;
     setError(null);
     setSaving(true);
-    const payload: BinInput = {
-      label,
-      location_id: locationId === "" ? null : locationId,
-      stack_position: stackPosition === "" ? null : Number(stackPosition),
-      fullness,
-      location_note: locationNote,
-      notes,
-    };
     try {
+      const { locationId: resolvedLocationId, locations: updatedLocations } =
+        await resolveOrCreateBinLocation(
+          locations,
+          locationId === "" ? null : locationId,
+          stackNumber,
+        );
+      setLocations(updatedLocations);
+      const payload: BinInput = {
+        label,
+        location_id: resolvedLocationId,
+        stack_position: stackPosition === "" ? null : Number(stackPosition),
+        fullness,
+        location_note: locationNote,
+        notes,
+      };
       const updated = await updateBin(bin.id, payload);
       setBin(updated);
     } catch (err) {
@@ -148,15 +169,26 @@ export default function BinDetail({ code }: Props) {
             onChange={(e) => setLocationId(e.target.value === "" ? "" : Number(e.target.value))}
           >
             <option value="">— none —</option>
-            {locations.map((loc) => (
-              <option key={loc.id} value={loc.id}>
-                {locationOptionLabel(locations, loc)}
-              </option>
-            ))}
+            {locations
+              .filter((loc) => PICKABLE_KINDS.includes(loc.kind))
+              .map((loc) => (
+                <option key={loc.id} value={loc.id}>
+                  {locationOptionLabel(locations, loc)}
+                </option>
+              ))}
           </select>
         </label>
         <label>
-          Stack position
+          Stack Number
+          <input
+            type="number"
+            min={1}
+            value={stackNumber}
+            onChange={(e) => setStackNumber(e.target.value)}
+          />
+        </label>
+        <label>
+          Position In Stack
           <input
             type="number"
             min={1}

@@ -5,11 +5,13 @@ from pydantic import BaseModel
 from sqlmodel import Session, select
 
 from db import engine
-from models import Bin, Location
+from models import Bin, Item, Location
+from routers.bins import item_names_by_bin, serialize_bin
 
 router = APIRouter(prefix="/api/locations", tags=["locations"])
 
 LEVELS = ["site", "zone", "stack", "slot"]
+GRID_NUMBER_ORDERS = {"front_to_back", "back_to_front", "left_to_right", "right_to_left"}
 
 
 class LocationCreate(BaseModel):
@@ -18,6 +20,7 @@ class LocationCreate(BaseModel):
     parent_id: Optional[int] = None
     grid_row: Optional[int] = None
     grid_col: Optional[int] = None
+    grid_number_order: Optional[str] = None
 
 
 class LocationUpdate(BaseModel):
@@ -26,6 +29,7 @@ class LocationUpdate(BaseModel):
     parent_id: Optional[int] = None
     grid_row: Optional[int] = None
     grid_col: Optional[int] = None
+    grid_number_order: Optional[str] = None
 
 
 class GridCreate(BaseModel):
@@ -68,6 +72,19 @@ def validate_grid(
         )
 
 
+def validate_grid_number_order(kind: str, grid_number_order: Optional[str]) -> None:
+    if grid_number_order is None:
+        return
+    if kind != "site":
+        raise HTTPException(
+            status_code=409, detail="grid_number_order only allowed on kind=site"
+        )
+    if grid_number_order not in GRID_NUMBER_ORDERS:
+        raise HTTPException(
+            status_code=422, detail=f"invalid grid_number_order: {grid_number_order}"
+        )
+
+
 @router.get("", response_model=list[Location])
 def list_locations():
     with Session(engine) as session:
@@ -93,34 +110,50 @@ def location_tree():
     return [build(loc) for loc in roots]
 
 
+def descendant_location_ids(locations: list[Location], root_id: int) -> set[int]:
+    by_parent: dict[Optional[int], list[Location]] = {}
+    for loc in locations:
+        by_parent.setdefault(loc.parent_id, []).append(loc)
+    ids = {root_id}
+    pending = [root_id]
+    while pending:
+        current = pending.pop()
+        for child in by_parent.get(current, []):
+            if child.id not in ids:
+                ids.add(child.id)
+                pending.append(child.id)
+    return ids
+
+
 @router.get("/{location_id}/bins")
-def location_bins(location_id: int):
+def location_bins(location_id: int, empty: Optional[bool] = None):
     with Session(engine) as session:
         loc = session.get(Location, location_id)
         if loc is None:
             raise HTTPException(status_code=404, detail="not found")
+        all_locations = session.exec(select(Location)).all()
+        location_ids = descendant_location_ids(all_locations, location_id)
         bins = session.exec(
-            select(Bin).where(Bin.location_id == location_id, Bin.status != "blank")
+            select(Bin).where(Bin.location_id.in_(location_ids), Bin.status != "blank")
         ).all()
+        if empty is not None:
+            bin_ids_with_items = {i.bin_id for i in session.exec(select(Item)).all()}
+            bins = [b for b in bins if (b.id not in bin_ids_with_items) == empty]
+        items = item_names_by_bin(session, {b.id for b in bins})
 
-    positioned = sorted(
-        (b for b in bins if b.stack_position is not None),
-        key=lambda b: -b.stack_position,
-    )
-    unpositioned = [b for b in bins if b.stack_position is None]
-
-    def bins_on_top(b: Bin) -> int:
-        if b.stack_position is None:
-            return 0
-        return sum(1 for other in positioned if other.stack_position > b.stack_position)
+    by_location: dict[Optional[int], list[Bin]] = {}
+    for b in bins:
+        by_location.setdefault(b.location_id, []).append(b)
 
     result = []
-    for b in positioned + unpositioned:
-        data = b.model_dump()
-        on_top = bins_on_top(b)
-        data["bins_on_top"] = on_top
-        data["is_buried"] = on_top > 0
-        result.append(data)
+    for group in by_location.values():
+        positioned = sorted(
+            (b for b in group if b.stack_position is not None),
+            key=lambda b: -b.stack_position,
+        )
+        unpositioned = [b for b in group if b.stack_position is None]
+        for b in positioned + unpositioned:
+            result.append(serialize_bin(b, group, items.get(b.id, [])))
     return result
 
 
@@ -200,6 +233,7 @@ def create_location(payload: LocationCreate):
     with Session(engine) as session:
         validate_hierarchy(session, payload.kind, payload.parent_id)
         validate_grid(payload.kind, payload.grid_row, payload.grid_col)
+        validate_grid_number_order(payload.kind, payload.grid_number_order)
         loc = Location(**payload.model_dump())
         session.add(loc)
         session.commit()
@@ -218,8 +252,10 @@ def update_location(location_id: int, payload: LocationUpdate):
         parent_id = data.get("parent_id", loc.parent_id)
         grid_row = data.get("grid_row", loc.grid_row)
         grid_col = data.get("grid_col", loc.grid_col)
+        grid_number_order = data.get("grid_number_order", loc.grid_number_order)
         validate_hierarchy(session, kind, parent_id)
         validate_grid(kind, grid_row, grid_col)
+        validate_grid_number_order(kind, grid_number_order)
         for field, value in data.items():
             setattr(loc, field, value)
         session.add(loc)

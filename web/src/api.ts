@@ -1,3 +1,12 @@
+export type GridNumberOrder = "front_to_back" | "back_to_front" | "left_to_right" | "right_to_left";
+
+export const GRID_NUMBER_ORDER_OPTIONS: { value: GridNumberOrder; label: string }[] = [
+  { value: "front_to_back", label: "Front to back" },
+  { value: "back_to_front", label: "Back to front" },
+  { value: "left_to_right", label: "Left to right" },
+  { value: "right_to_left", label: "Right to left" },
+];
+
 export interface Location {
   id: number;
   name: string;
@@ -5,6 +14,7 @@ export interface Location {
   parent_id: number | null;
   grid_row: number | null;
   grid_col: number | null;
+  grid_number_order: GridNumberOrder | null;
 }
 
 export interface LocationTreeNode extends Location {
@@ -32,6 +42,7 @@ export interface Bin {
   created_at: string;
   is_buried: boolean;
   bins_on_top: number;
+  item_names: string[];
 }
 
 export type BinWithBuried = Bin;
@@ -66,6 +77,19 @@ export function getLocationTree(): Promise<LocationTreeNode[]> {
   return request<LocationTreeNode[]>("/locations/tree");
 }
 
+export interface LocationUpdateInput {
+  name?: string;
+  kind?: string;
+  parent_id?: number | null;
+  grid_row?: number | null;
+  grid_col?: number | null;
+  grid_number_order?: GridNumberOrder | null;
+}
+
+export function updateLocation(id: number, data: LocationUpdateInput): Promise<Location> {
+  return request<Location>(`/locations/${id}`, { method: "PATCH", body: JSON.stringify(data) });
+}
+
 export function listBins(params?: {
   location_id?: number;
   include_blank?: boolean;
@@ -83,8 +107,12 @@ export function getBin(id: number): Promise<Bin> {
   return request<Bin>(`/bins/${id}`);
 }
 
-export function getLocationBins(locationId: number): Promise<BinWithBuried[]> {
-  return request<BinWithBuried[]>(`/locations/${locationId}/bins`);
+export function getLocationBins(
+  locationId: number,
+  params?: { empty?: boolean },
+): Promise<BinWithBuried[]> {
+  const suffix = params?.empty != null ? `?empty=${params.empty}` : "";
+  return request<BinWithBuried[]>(`/locations/${locationId}/bins${suffix}`);
 }
 
 export async function getBinByCode(code: string): Promise<Bin | null> {
@@ -286,9 +314,13 @@ export function getGrid(siteId: number): Promise<Grid> {
   return request<Grid>(`/locations/${siteId}/grid`);
 }
 
-function locationLabel(loc: Location): string {
+// Shown to the user instead of the raw "R#C#" grid coordinate — the Grid
+// view still shows coordinates (it's a spatial map), but everywhere a bin's
+// location is displayed as text, a grid stack reads as its Stack Number.
+function locationLabel(locations: Location[], loc: Location): string {
   if (loc.kind === "stack" && loc.grid_row != null && loc.grid_col != null) {
-    return `R${loc.grid_row}C${loc.grid_col}`;
+    const n = stackNumberOf(locations, loc);
+    return n != null ? `Stack ${n}` : loc.name;
   }
   return loc.name;
 }
@@ -305,7 +337,7 @@ function locationDepth(locations: Location[], loc: Location): number {
 }
 
 export function locationOptionLabel(locations: Location[], loc: Location): string {
-  return `${"— ".repeat(locationDepth(locations, loc))}${locationLabel(loc)}`;
+  return `${"— ".repeat(locationDepth(locations, loc))}${locationLabel(locations, loc)}`;
 }
 
 export function locationPath(locations: Location[], locationId: number | null): string {
@@ -314,10 +346,133 @@ export function locationPath(locations: Location[], locationId: number | null): 
   const parts: string[] = [];
   let current = byId.get(locationId);
   while (current) {
-    parts.unshift(locationLabel(current));
+    parts.unshift(locationLabel(locations, current));
     current = current.parent_id != null ? byId.get(current.parent_id) : undefined;
   }
   return parts.join(" · ");
+}
+
+// Stacks that a bin's location can be numbered under: direct "stack" children
+// of a site (grid layout) or a zone (linear layout). Grid stacks are ordered
+// per the site's grid_number_order (default front-to-back, then left-to-right);
+// linear stacks are ordered by creation (id) order.
+function orderedStacks(locations: Location[], parent: Location): Location[] {
+  const children = locations.filter((l) => l.parent_id === parent.id && l.kind === "stack");
+  const isGrid = children.some((c) => c.grid_row != null && c.grid_col != null);
+  if (!isGrid) {
+    return [...children].sort((a, b) => a.id - b.id);
+  }
+  const order = parent.grid_number_order ?? "front_to_back";
+  const rowDir = order === "back_to_front" ? -1 : 1;
+  const colDir = order === "right_to_left" ? -1 : 1;
+  const primaryIsRow = order === "front_to_back" || order === "back_to_front";
+  return [...children].sort((a, b) => {
+    const ar = a.grid_row ?? 0;
+    const ac = a.grid_col ?? 0;
+    const br = b.grid_row ?? 0;
+    const bc = b.grid_col ?? 0;
+    if (primaryIsRow) {
+      return ar !== br ? (ar - br) * rowDir : (ac - bc) * colDir;
+    }
+    return ac !== bc ? (ac - bc) * colDir : (ar - br) * rowDir;
+  });
+}
+
+export function resolveStackNumber(
+  locations: Location[],
+  parentId: number,
+  stackNumber: number,
+): Location | undefined {
+  const parent = locations.find((l) => l.id === parentId);
+  if (!parent) return undefined;
+  return orderedStacks(locations, parent)[stackNumber - 1];
+}
+
+export function stackNumberOf(locations: Location[], stack: Location): number | null {
+  if (stack.parent_id == null) return null;
+  const parent = locations.find((l) => l.id === stack.parent_id);
+  if (!parent) return null;
+  const idx = orderedStacks(locations, parent).findIndex((s) => s.id === stack.id);
+  return idx === -1 ? null : idx + 1;
+}
+
+// Splits a bin's raw location_id into the zone/site shown in the Location
+// dropdown plus the 1-based "Stack Number" within it, for populating an edit form.
+export function splitBinLocation(
+  locations: Location[],
+  locationId: number | null,
+): { parentId: number | null; stackNumber: string } {
+  if (locationId == null) return { parentId: null, stackNumber: "" };
+  const loc = locations.find((l) => l.id === locationId);
+  if (loc && loc.kind === "stack") {
+    const num = stackNumberOf(locations, loc);
+    return { parentId: loc.parent_id, stackNumber: num != null ? String(num) : "" };
+  }
+  return { parentId: locationId, stackNumber: "" };
+}
+
+// Creates whatever stacks are missing so that `stackNumber` resolves under
+// `parent`. Linear zones just get new named "Stack N" children appended in
+// order. Grid sites get their grid grown along the numbering-direction axis
+// (keeping the existing cross-axis width) via the same idempotent endpoint
+// the "Generate grid" button uses. Returns the full, merged location list.
+async function ensureStackExists(
+  locations: Location[],
+  parent: Location,
+  stackNumber: number,
+): Promise<Location[]> {
+  if (parent.kind !== "site") {
+    const existing = locations.filter((l) => l.parent_id === parent.id && l.kind === "stack");
+    let updated = locations;
+    for (let i = existing.length + 1; i <= stackNumber; i++) {
+      const created = await request<Location>("/locations", {
+        method: "POST",
+        body: JSON.stringify({ name: `Stack ${i}`, kind: "stack", parent_id: parent.id }),
+      });
+      updated = [...updated, created];
+    }
+    return updated;
+  }
+
+  const existingStacks = locations.filter((l) => l.parent_id === parent.id && l.kind === "stack");
+  const order = parent.grid_number_order ?? "front_to_back";
+  const primaryIsRow = order === "front_to_back" || order === "back_to_front";
+  const currentWidth = Math.max(
+    1,
+    ...existingStacks.map((s) => (primaryIsRow ? (s.grid_col ?? 0) : (s.grid_row ?? 0))),
+  );
+  const neededPrimary = Math.ceil(stackNumber / currentWidth);
+  const rows = primaryIsRow ? neededPrimary : currentWidth;
+  const cols = primaryIsRow ? currentWidth : neededPrimary;
+  const allStacks = await createGrid(parent.id, rows, cols);
+  return [
+    ...locations.filter((l) => !(l.parent_id === parent.id && l.kind === "stack")),
+    ...allStacks,
+  ];
+}
+
+// Inverse of splitBinLocation: resolves the (zone/site, Stack Number) chosen
+// in the form back to the actual location_id to save, creating the stack if
+// it doesn't exist yet. Returns the resolved location_id and the (possibly
+// updated) location list to keep the caller's state in sync.
+export async function resolveOrCreateBinLocation(
+  locations: Location[],
+  parentId: number | null,
+  stackNumber: string,
+): Promise<{ locationId: number | null; locations: Location[] }> {
+  if (parentId == null) return { locationId: null, locations };
+  if (stackNumber.trim() === "") return { locationId: parentId, locations };
+  const parent = locations.find((l) => l.id === parentId);
+  if (!parent) return { locationId: parentId, locations };
+
+  const n = Number(stackNumber);
+  let stack = resolveStackNumber(locations, parentId, n);
+  let updated = locations;
+  if (!stack) {
+    updated = await ensureStackExists(locations, parent, n);
+    stack = resolveStackNumber(updated, parentId, n);
+  }
+  return { locationId: stack ? stack.id : parentId, locations: updated };
 }
 
 export function binAddress(locations: Location[], bin: Bin): string {

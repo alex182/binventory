@@ -97,6 +97,13 @@ def setup_search_index() -> None:
             )
 
 
+def migrate_schema() -> None:
+    with engine.begin() as conn:
+        cols = {row[1] for row in conn.exec_driver_sql("PRAGMA table_info(location)").fetchall()}
+        if "grid_number_order" not in cols:
+            conn.exec_driver_sql("ALTER TABLE location ADD COLUMN grid_number_order VARCHAR")
+
+
 def get_session():
     with Session(engine) as session:
         yield session
@@ -113,6 +120,7 @@ def seed(session: Session) -> None:
 
 def init_db() -> None:
     SQLModel.metadata.create_all(engine)
+    migrate_schema()
     with Session(engine) as session:
         seed(session)
     setup_search_index()

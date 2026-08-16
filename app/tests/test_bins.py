@@ -54,6 +54,18 @@ def test_get_bin_by_code():
     assert client.get("/api/bins/by-code/zzzznope").status_code == 404
 
 
+def test_bin_includes_item_names():
+    bin_id = client.post("/api/bins", json={"label": "Contents test"}).json()["id"]
+    client.post(f"/api/bins/{bin_id}/items", json={"name": "widget"})
+    client.post(f"/api/bins/{bin_id}/items", json={"name": "gadget"})
+
+    detail = client.get(f"/api/bins/{bin_id}").json()
+    assert sorted(detail["item_names"]) == ["gadget", "widget"]
+
+    listed = next(b for b in client.get("/api/bins").json() if b["id"] == bin_id)
+    assert sorted(listed["item_names"]) == ["gadget", "widget"]
+
+
 def test_empty_filter():
     empty_bin = client.post("/api/bins", json={"label": "Empty bin"}).json()
     full_bin = client.post("/api/bins", json={"label": "Full bin"}).json()
