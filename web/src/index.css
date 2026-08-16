@@ -11,8 +11,6 @@
   --border-lighter: #eeeeee;
   --selected-bg: #1a1a1a;
   --selected-fg: #ffffff;
-  --empty-cell: #aaaaaa;
-
   --badge-bg: #eeeeee;
   --badge-fg: #333333;
   --badge-buried-bg: #fde2b8;
@@ -42,7 +40,6 @@
     --border-lighter: #2a2b2e;
     --selected-bg: #e8e8e8;
     --selected-fg: #17181a;
-    --empty-cell: #6a6b6e;
 
     --badge-bg: #2e2f33;
     --badge-fg: #d8d8d8;
@@ -403,27 +400,6 @@ ul {
   display: flex;
   flex-direction: column;
   gap: 2px;
-}
-
-.grid-table {
-  border-collapse: collapse;
-}
-
-.grid-table td {
-  padding: 4px;
-}
-
-.grid-table button {
-  width: 100%;
-  min-width: 64px;
-}
-
-.empty-cell {
-  display: inline-block;
-  padding: 8px;
-  color: var(--empty-cell);
-  text-align: center;
-  min-width: 64px;
 }
 
 .scan-debug {

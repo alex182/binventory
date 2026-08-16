@@ -1,19 +1,24 @@
 import { useEffect, useState } from "react";
-import { Bin, Location, listLocations } from "../api";
+import {
+  Bin,
+  GRID_NUMBER_ORDER_OPTIONS,
+  GridNumberOrder,
+  Location,
+  listLocations,
+  updateLocation,
+} from "../api";
 import { navigate } from "../router";
 import BinForm from "./BinForm";
-import GridView from "./GridView";
 import LocationDetail from "./LocationDetail";
 
 export default function Locations() {
   // Sites only — zones, stacks, and slots are reached by selecting a site
-  // and browsing its (recursive) bin list or Grid view, not via a tree.
+  // and browsing its recursive bin list, not via a tree.
   const [sites, setSites] = useState<Location[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [refreshToken, setRefreshToken] = useState(0);
-  const [view, setView] = useState<"bins" | "grid">("bins");
   const [emptyOnly, setEmptyOnly] = useState(false);
 
   const selectedLocation = locations.find((l) => l.id === selectedId) ?? null;
@@ -31,7 +36,6 @@ export default function Locations() {
 
   function selectLocation(id: number) {
     setSelectedId(id);
-    setView("bins");
   }
 
   function goToBin(bin: Bin) {
@@ -61,42 +65,42 @@ export default function Locations() {
           <p>Select a location to see its bins.</p>
         ) : (
           <>
-            {isSite && (
-              <div className="view-toggle">
-                <button disabled={view === "bins"} onClick={() => setView("bins")}>
-                  Bins
-                </button>
-                <button disabled={view === "grid"} onClick={() => setView("grid")}>
-                  Grid view
-                </button>
-              </div>
+            {isSite && selectedLocation && (
+              <label className="grid-order-inline">
+                Stack numbering direction
+                <select
+                  value={selectedLocation.grid_number_order ?? "front_to_back"}
+                  onChange={async (e) => {
+                    await updateLocation(selectedLocation.id, {
+                      grid_number_order: e.target.value as GridNumberOrder,
+                    });
+                    refreshTree();
+                  }}
+                >
+                  {GRID_NUMBER_ORDER_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
             )}
-            {view === "grid" && selectedLocation && selectedLocation.kind === "site" ? (
-              <GridView
-                site={selectedLocation}
-                onSelectStack={selectLocation}
-                onGridChanged={refreshTree}
+            <button onClick={() => setShowForm(true)}>+ New bin here</button>
+            <label className="empty-filter">
+              <input
+                type="checkbox"
+                checked={emptyOnly}
+                onChange={(e) => setEmptyOnly(e.target.checked)}
               />
-            ) : (
-              <>
-                <button onClick={() => setShowForm(true)}>+ New bin here</button>
-                <label className="empty-filter">
-                  <input
-                    type="checkbox"
-                    checked={emptyOnly}
-                    onChange={(e) => setEmptyOnly(e.target.checked)}
-                  />
-                  Show only empty bins
-                </label>
-                <LocationDetail
-                  locationId={selectedId}
-                  locations={locations}
-                  refreshToken={refreshToken}
-                  emptyOnly={emptyOnly}
-                  onSelectBin={goToBin}
-                />
-              </>
-            )}
+              Show only empty bins
+            </label>
+            <LocationDetail
+              locationId={selectedId}
+              locations={locations}
+              refreshToken={refreshToken}
+              emptyOnly={emptyOnly}
+              onSelectBin={goToBin}
+            />
           </>
         )}
         {showForm && (

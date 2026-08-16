@@ -289,20 +289,6 @@ export function search(q: string): Promise<SearchResult[]> {
   return request<SearchResult[]>(`/search?q=${encodeURIComponent(q)}`);
 }
 
-export interface GridCell {
-  stack_id: number;
-  grid_row: number;
-  grid_col: number;
-  bin_count: number;
-  top_bin: Bin | null;
-}
-
-export interface Grid {
-  rows: number;
-  cols: number;
-  cells: GridCell[];
-}
-
 export function createGrid(siteId: number, rows: number, cols: number): Promise<Location[]> {
   return request<Location[]>(`/locations/${siteId}/grid`, {
     method: "POST",
@@ -310,13 +296,8 @@ export function createGrid(siteId: number, rows: number, cols: number): Promise<
   });
 }
 
-export function getGrid(siteId: number): Promise<Grid> {
-  return request<Grid>(`/locations/${siteId}/grid`);
-}
-
-// Shown to the user instead of the raw "R#C#" grid coordinate — the Grid
-// view still shows coordinates (it's a spatial map), but everywhere a bin's
-// location is displayed as text, a grid stack reads as its Stack Number.
+// Shown to the user instead of the raw "R#C#" grid coordinate: a grid
+// stack reads as its Stack Number everywhere its location is displayed.
 function locationLabel(locations: Location[], loc: Location): string {
   if (loc.kind === "stack" && loc.grid_row != null && loc.grid_col != null) {
     const n = stackNumberOf(locations, loc);
