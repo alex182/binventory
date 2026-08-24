@@ -143,6 +143,50 @@ nav button {
   flex: 0 0 auto;
 }
 
+@media (max-width: 640px) {
+  #root {
+    padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+  }
+
+  nav {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 100;
+    margin: 0;
+    gap: 0;
+    overflow-x: visible;
+    background: var(--card-bg);
+    border-top: 1px solid var(--border-light);
+    padding: 0 env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+  }
+
+  nav button {
+    flex: 1 1 0;
+    min-width: 0;
+    min-height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    white-space: normal;
+    line-height: 1.15;
+    font-size: 0.75rem;
+    border: none;
+    border-top: 2px solid transparent;
+    border-radius: 0;
+    background: transparent;
+  }
+
+  nav button.selected {
+    background: transparent;
+    color: var(--fg);
+    font-weight: 600;
+    border-top-color: var(--fg);
+  }
+}
+
 .theme-toggle {
   margin-left: auto;
 }
@@ -279,6 +323,10 @@ ul {
   font-size: 0.85rem;
 }
 
+.empty-filter {
+  margin-bottom: 16px;
+}
+
 .hint {
   color: var(--muted-light);
   font-size: 0.8rem;
@@ -317,6 +365,43 @@ ul {
   }
 }
 
+@media (max-width: 639px) {
+  .locations-page aside h2 {
+    margin-bottom: 8px;
+  }
+
+  .locations-page aside .tree {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    gap: 8px;
+  }
+
+  .locations-page aside .tree li {
+    margin: 0;
+  }
+
+  .locations-page aside .tree button {
+    width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .bin-list li,
+  .item-list li,
+  .loans-list li,
+  .history-list li,
+  .bin-select-list li {
+    gap: 8px 10px;
+    padding: 14px 0;
+  }
+
+  .bin-list li .address,
+  .bin-list li .contents-preview {
+    flex-basis: 100%;
+  }
+}
+
 .move-dialog,
 .bin-form,
 .claim-form {
@@ -330,8 +415,38 @@ ul {
 .move-dialog .actions,
 .bin-form .actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   margin-top: 8px;
+}
+
+.loan-control {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.loan-control input {
+  width: auto;
+  flex: 1 1 120px;
+}
+
+.add-item-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.add-item-form input[type="text"],
+.add-item-form input:not([type]) {
+  flex: 1 1 160px;
+  width: auto;
+}
+
+.add-item-form input[type="number"] {
+  flex: 0 0 72px;
+  width: auto;
 }
 
 .photo-grid {
@@ -342,8 +457,8 @@ ul {
 }
 
 .photo-thumb img {
-  width: 140px;
-  height: 140px;
+  width: clamp(90px, 28vw, 140px);
+  height: clamp(90px, 28vw, 140px);
   object-fit: cover;
   border-radius: 6px;
   display: block;
