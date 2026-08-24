@@ -13,14 +13,18 @@ export default function App() {
   const binCodeMatch = path.match(/^\/b\/([^/]+)$/);
 
   let content;
+  let activeTab: "locations" | "scan" | "print" | "loans" = "locations";
   if (binCodeMatch) {
     content = <BinDetail code={decodeURIComponent(binCodeMatch[1])} />;
   } else if (path === "/scan") {
     content = <Scan />;
+    activeTab = "scan";
   } else if (path === "/print") {
     content = <PrintSheet />;
+    activeTab = "print";
   } else if (path === "/loans") {
     content = <Loans />;
+    activeTab = "loans";
   } else {
     content = <Locations />;
   }
@@ -34,10 +38,18 @@ export default function App() {
         </div>
       )}
       <nav className="no-print">
-        <button onClick={() => navigate("/")}>Locations</button>
-        <button onClick={() => navigate("/scan")}>Scan</button>
-        <button onClick={() => navigate("/print")}>Print labels</button>
-        <button onClick={() => navigate("/loans")}>Loans</button>
+        <button className={activeTab === "locations" ? "selected" : ""} onClick={() => navigate("/")}>
+          Locations
+        </button>
+        <button className={activeTab === "scan" ? "selected" : ""} onClick={() => navigate("/scan")}>
+          Scan
+        </button>
+        <button className={activeTab === "print" ? "selected" : ""} onClick={() => navigate("/print")}>
+          Print labels
+        </button>
+        <button className={activeTab === "loans" ? "selected" : ""} onClick={() => navigate("/loans")}>
+          Loans
+        </button>
       </nav>
       <div className="no-print">
         <SearchBar />

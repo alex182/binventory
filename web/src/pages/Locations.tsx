@@ -94,6 +94,17 @@ export default function Locations() {
               />
               Show only empty bins
             </label>
+            {showForm && (
+              <BinForm
+                locations={locations}
+                defaultLocationId={selectedId}
+                onCancel={() => setShowForm(false)}
+                onSaved={(savedBin) => {
+                  setShowForm(false);
+                  goToBin(savedBin);
+                }}
+              />
+            )}
             <LocationDetail
               locationId={selectedId}
               locations={locations}
@@ -102,17 +113,6 @@ export default function Locations() {
               onSelectBin={goToBin}
             />
           </>
-        )}
-        {showForm && (
-          <BinForm
-            locations={locations}
-            defaultLocationId={selectedId}
-            onCancel={() => setShowForm(false)}
-            onSaved={(savedBin) => {
-              setShowForm(false);
-              goToBin(savedBin);
-            }}
-          />
         )}
       </main>
     </div>

@@ -260,7 +260,6 @@ export default function BinDetail({ code }: Props) {
         />
       )}
       <HistorySection binId={bin.id} refreshToken={historyRefreshToken} />
-      <button onClick={() => navigate("/")}>Back to locations</button>
     </div>
   );
 }
